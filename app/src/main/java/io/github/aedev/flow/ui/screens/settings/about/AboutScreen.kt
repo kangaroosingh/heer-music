@@ -52,13 +52,11 @@ import io.github.aedev.flow.ui.screens.settings.index.DestinationIndex
 
 private enum class AboutDialog { CHANGELOG, DEVICE, NOTICES }
 
-private const val WEBSITE_URL = "https://flow-tube.org"
-private const val GITHUB_URL = "https://github.com/Flow-Tube/Flow"
-private const val REDDIT_URL = "https://www.reddit.com/r/Flow_Official/"
-private const val CREATOR_URL = "https://github.com/A-EDev"
+private const val WEBSITE_URL = "https://github.com/kangaroosingh/heer-music"
+private const val GITHUB_URL = "https://github.com/kangaroosingh/heer-music"
+private const val CREATOR_URL = "https://github.com/kangaroosingh"
 private const val NEWPIPE_URL = "https://github.com/TeamNewPipe/NewPipeExtractor"
-private const val LICENSE_URL = "https://github.com/Flow-Tube/Flow/blob/main/License"
-private const val CREATOR_AVATAR_URL = "https://github.com/A-EDev.png?size=144"
+private const val LICENSE_URL = "https://github.com/kangaroosingh/heer-music/blob/feature/heer-music/License"
 
 private val LogoSize = 72.dp
 private val HeaderPadding = 24.dp
@@ -96,7 +94,14 @@ internal fun AboutScreen(
         group(key = "about.contact", header = R.string.section_contact) {
             nav(AboutIndex.website, icon = Icons.Outlined.Public, showChevron = false, onClick = { open(WEBSITE_URL) })
             nav(AboutIndex.github, iconRes = R.drawable.ic_github, showChevron = false, onClick = { open(GITHUB_URL) })
-            nav(AboutIndex.reddit, icon = IconReddit, showChevron = false, onClick = { open(REDDIT_URL) })
+        }
+        item("about.upstream") {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(stringResource(R.string.hm_upstream_credit), style = MaterialTheme.typography.bodySmall)
+                androidx.compose.material3.TextButton(onClick = { open("https://github.com/Flow-Tube/Flow") }) {
+                    Text(stringResource(R.string.hm_upstream_source))
+                }
+            }
         }
         group(key = "about.legal", header = R.string.section_legal) {
             nav(AboutIndex.license, icon = Icons.Outlined.Description, showChevron = false, onClick = { open(LICENSE_URL) })
@@ -144,7 +149,7 @@ private fun AboutHeader() {
             tint = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = stringResource(R.string.app_name),
+            text = stringResource(R.string.fm_app_name),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -162,7 +167,6 @@ private fun CreatorRow(
     shape: Shape,
     onClick: () -> Unit,
 ) {
-    var avatarLoaded by remember { mutableStateOf(false) }
     SegmentedListItem(
         onClick = onClick,
         verticalAlignment = Alignment.CenterVertically,
@@ -173,22 +177,18 @@ private fun CreatorRow(
                 modifier = Modifier.size(AvatarSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
                 contentAlignment = Alignment.Center,
             ) {
-                if (!avatarLoaded) {
-                    Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                AsyncImage(
-                    model = CREATOR_AVATAR_URL,
+                Icon(
+                    painterResource(R.drawable.ic_notification_logo),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { avatarLoaded = true },
-                    modifier = Modifier.matchParentSize(),
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
         overlineContent = { Text(stringResource(R.string.about_creator)) },
-        supportingContent = { Text(stringResource(R.string.settings_creator_role)) },
+        supportingContent = { Text(stringResource(R.string.hm_developer_role)) },
         trailingContent = { Icon(painterResource(R.drawable.ic_github), contentDescription = null) },
     ) {
-        Text(stringResource(R.string.about_creator_name), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.hm_developer_name), style = MaterialTheme.typography.titleMedium)
     }
 }

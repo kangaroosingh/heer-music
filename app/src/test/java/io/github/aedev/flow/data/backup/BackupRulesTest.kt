@@ -61,6 +61,8 @@ class BackupRulesTest {
             "flow_neuro_neighbours_v1.json",
             "flow_blocked_channel_names_v1.json",
             "flow_music_brain_v1.json",
+            "music_recommendations_v1",
+            "smart_downloads_v1",
             "sync_identity",
             "linked_device",
             "sync_brain_crdt",

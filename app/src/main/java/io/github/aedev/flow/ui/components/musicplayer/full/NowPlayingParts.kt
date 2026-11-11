@@ -91,6 +91,8 @@ internal fun PlayerTrackHeader(
     animateTrackText: Boolean,
     showLibraryActions: Boolean,
     isLiked: Boolean,
+    isDisliked: Boolean,
+    onDislikeClick: () -> Unit,
     isDownloaded: Boolean,
     onLikeClick: () -> Unit,
     onDownloadClick: () -> Unit,
@@ -98,49 +100,52 @@ internal fun PlayerTrackHeader(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-            AnimatedContent(
-                targetState = title,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "title",
-            ) { value ->
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.trackTextMarquee(animateTrackText),
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            AnimatedContent(
-                targetState = artist,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "artist",
-            ) { value ->
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable(onClick = onArtistClick).trackTextMarquee(animateTrackText),
-                )
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                AnimatedContent(
+                    targetState = title,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "title",
+                ) { value ->
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.trackTextMarquee(animateTrackText),
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                AnimatedContent(
+                    targetState = artist,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "artist",
+                ) { value ->
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable(onClick = onArtistClick).trackTextMarquee(animateTrackText),
+                    )
+                }
             }
         }
 
         if (showLibraryActions) {
-            Spacer(modifier = Modifier.width(12.dp))
             PlayerMainActionButtons(
                 isLiked = isLiked,
+                isDisliked = isDisliked,
+                onDislikeClick = onDislikeClick,
                 isDownloaded = isDownloaded,
                 onLikeClick = onLikeClick,
                 onDownloadClick = onDownloadClick,

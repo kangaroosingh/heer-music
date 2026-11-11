@@ -57,7 +57,7 @@ class MusicPlayerTrackActionsTest {
         )
 
     @Test
-    fun `liking a song downloads it when the option is on`() =
+    fun `liking a song queues an audio download`() =
         runTest(dispatcher) {
             every { preferences.autoDownloadLikedMusic } returns flowOf(true)
 
@@ -68,7 +68,7 @@ class MusicPlayerTrackActionsTest {
         }
 
     @Test
-    fun `nothing downloads with the option off or on an unlike`() =
+    fun `liking downloads even with the legacy option off and unliking does not queue again`() =
         runTest(dispatcher) {
             every { preferences.autoDownloadLikedMusic } returns flowOf(false)
             actions(isLiked = false).toggleLike()
@@ -78,7 +78,7 @@ class MusicPlayerTrackActionsTest {
             actions(isLiked = true).toggleLike()
             advanceUntilIdle()
 
-            coVerify(exactly = 0) { downloadManager.downloadTrack(any()) }
+            coVerify(exactly = 1) { downloadManager.downloadTrack(track) }
         }
 
     @Test

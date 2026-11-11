@@ -92,6 +92,7 @@ internal fun DownloadSettingsScreen(
     cacheViewModel: DownloadCacheViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val likeDownloadLabel = stringResource(R.string.hm_like_download)
     val locations by viewModel.locations.collectAsStateWithLifecycle()
     val quickQuality by viewModel.quickQuality.collectAsStateWithLifecycle()
     val musicQuality by viewModel.musicQuality.collectAsStateWithLifecycle()
@@ -187,7 +188,7 @@ internal fun DownloadSettingsScreen(
             }
             toggleGroup(DownloadsIndex.menuStyle, menuStyles, menuStyle, viewModel::setMenuStyle)
             switch(DownloadsIndex.askEveryTime, viewModel.askEveryTime, viewModel::setAskEveryTime)
-            switch(DownloadsIndex.autoDownloadLikes, viewModel.autoDownloadLikes, viewModel::setAutoDownloadLikes)
+            info(DownloadsIndex.autoDownloadLikes, value = likeDownloadLabel)
             choice(DownloadsIndex.autoDownloadOpened, onClick = { picker = DownloadPicker.AUTO_DOWNLOAD }) {
                 stringResource(autoDownloadLabel(autoDownloadOpened))
             }

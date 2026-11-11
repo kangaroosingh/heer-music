@@ -51,7 +51,7 @@ class DownloadRequestTest {
     }
 
     @Test
-    fun `a song request is audio only with its album, artists and track number`() {
+    fun `a music video song request downloads audio only with its album artists and track number`() {
         val track =
             MusicTrack(
                 videoId = "song",
@@ -61,12 +61,16 @@ class DownloadRequestTest {
                 duration = 60,
                 album = "Album",
                 albumId = "MPREb_1",
+                isVideoSong = true,
                 artists = listOf(MusicArtist("Artist A", "UCa"), MusicArtist("Artist B", null)),
             )
 
         val request = track.toDownloadRequest(collectionId = "MPREb_1", trackNumber = 3, trackTotal = 12, albumArtist = "Artist A")
 
         assertThat(request.wantsAudioOnly).isTrue()
+        assertThat(request.audioOnly).isTrue()
+        assertThat(request.videoItag).isNull()
+        assertThat(request.targetHeight).isNull()
         assertThat(request.tags.artists).containsExactly("Artist A", "Artist B").inOrder()
         assertThat(request.tags.trackNumber).isEqualTo(3)
         assertThat(request.tags.sourceUrl).isEqualTo("https://music.youtube.com/watch?v=song")

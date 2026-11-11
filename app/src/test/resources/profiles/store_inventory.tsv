@@ -158,3 +158,6 @@ no_backup_dir	profiles/<id>/pending_restore.zip	main:data/profile/ProfileSlices.
 cache_dir	held_link/	main:data/profile/SwitchIntentQueue.kt	CACHE	-	A playlist file shared during a switch, kept for the next profile to open; replaced by the next one.
 files_dir	profile_avatars/	main:data/profile/ProfileAvatarPhotos.kt	DEVICE	-	Avatar photos of every profile, named by profile id, beside the registry that lists them; backed up with it and deleted with the profile.
 cache_dir	master_live_slice.zip	main:data/profile/ProfileSlices.kt	CACHE	-	The running profile exported while a master backup is put together; deleted once the backup is written.
+prefs_datastore	music_recommendations_v1	main:data/recommendation/music/MusicPersonalization.kt	PROFILE	private	Local listening taste, feedback and recommendation metrics; never backed up.
+prefs_datastore	smart_downloads_v1	main:data/music/smart/SmartDownloadStore.kt	PROFILE	private	Automatic download consent, device budget and recent queue reservations; never backed up.
+files_dir	-	main:data/music/smart/SmartDownloadEnvironment.kt	DEVICE	-	Reads free space on the install storage volume; writes no profile data.

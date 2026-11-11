@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,7 +35,13 @@ internal fun MusicTasteControls(
     IconButton(onClick = { open = true }) {
         Icon(Icons.Outlined.Tune, stringResource(R.string.fm_taste))
     }
+    IconButton(onClick = {
+        showSmartDownloads = true
+    }) {
+        Icon(Icons.Outlined.Download, stringResource(R.string.fm_smart_title))
+    }
     val settings = profile ?: return
+    if (showSmartDownloads) SmartDownloadsSheet(onDismiss = { showSmartDownloads = false })
     if (!open) return
     val artists by vm.picker.state.collectAsStateWithLifecycle()
     val query by vm.picker.query.collectAsStateWithLifecycle()
@@ -56,14 +63,13 @@ internal fun MusicTasteControls(
         ) {
             Text(stringResource(R.string.fm_taste), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.fm_local_notice), style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { showSmartDownloads = !showSmartDownloads }) { Text(stringResource(R.string.fm_smart_title)) }
-            if (showSmartDownloads) {
-                SmartDownloadControls(
-                    androidx.hilt.navigation.compose
-                        .hiltViewModel(),
-                )
-                HorizontalDivider()
-            }
+            TextButton(onClick = {
+                vm.finish {
+                    open = false
+                    showSmartDownloads = true
+                    onChanged()
+                }
+            }) { Text(stringResource(R.string.fm_smart_title)) }
             Text(stringResource(R.string.fm_languages), style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val languages =

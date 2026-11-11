@@ -130,7 +130,7 @@ fun HomeScreen(
             FlowTopBar(
                 title = {
                     Text(
-                        stringResource(R.string.app_name_uppercase),
+                        stringResource(R.string.fm_app_name_uppercase),
                         modifier = logoClicks,
                         style =
                             MaterialTheme.typography.titleLarge.copy(

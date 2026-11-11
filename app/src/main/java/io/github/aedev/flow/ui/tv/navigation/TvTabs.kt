@@ -26,10 +26,11 @@ fun tvNavigation(
     order: List<Int>,
     defaultTabId: Int,
     visibility: NavigationVisibility,
+    musicOnly: Boolean = io.github.aedev.flow.BuildConfig.MUSIC_ONLY,
 ): TvNavigation {
     val tvVisibility = visibility.copy(shorts = false, search = true, categories = false)
     return TvNavigation(
-        tabs = visibleFlowTabs(order, tvVisibility),
-        startTab = resolveDefaultFlowTab(defaultTabId, order, tvVisibility),
+        tabs = visibleFlowTabs(order, tvVisibility, musicOnly),
+        startTab = resolveDefaultFlowTab(defaultTabId, order, tvVisibility, musicOnly),
     )
 }

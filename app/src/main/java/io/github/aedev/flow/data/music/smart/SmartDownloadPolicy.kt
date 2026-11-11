@@ -21,17 +21,28 @@ object SmartDownloadPolicy {
         dislikedIds: Set<String>,
         earlySkips: Map<String, Int>,
         now: Long,
+        reservedBytes: Long = 0,
+        bitsPerSecond: Int = 160_000,
     ): List<MusicTrack> {
         if (freeBytes <= MIN_FREE_BYTES) return emptyList()
-        val capacity = (settings.maxSongs.coerceIn(10, 50) - automaticCount.coerceAtLeast(0)).coerceAtLeast(0)
+        val batch = if (settings.maxStorageBytes == null) BATCH_SIZE else SmartDownloadStorage.STORAGE_BATCH_SIZE
+        val capacity =
+            if (settings.maxStorageBytes ==
+                null
+            ) {
+                (settings.maxSongs.coerceIn(10, 50) - automaticCount.coerceAtLeast(0)).coerceAtLeast(0)
+            } else {
+                batch
+            }
         val space =
             (
                 (freeBytes - MIN_FREE_BYTES) / RESERVE_PER_SONG -
                     pendingCount.coerceAtLeast(
                         0,
                     )
-            ).coerceIn(0L, BATCH_SIZE.toLong()).toInt()
+            ).coerceIn(0L, batch.toLong()).toInt()
         if (!settings.enabled || !settings.networkConfigured || capacity == 0 || space == 0) return emptyList()
+        var remaining = (settings.maxStorageBytes ?: Long.MAX_VALUE) - reservedBytes
         return ranked
             .asSequence()
             .distinctBy { it.videoId }
@@ -40,7 +51,19 @@ object SmartDownloadPolicy {
                     track.videoId !in existingIds && track.videoId !in dislikedIds &&
                     (earlySkips[track.videoId] ?: 0) < 2 &&
                     settings.recentAdditions[track.videoId]?.let { now - it < READDITION_DELAY_MS } != true
-            }.take(minOf(capacity, space, BATCH_SIZE))
+            }.filter { track ->
+                if (settings.maxStorageBytes == null) {
+                    true
+                } else {
+                    val bytes = SmartDownloadStorage.estimateBytes(track.duration, bitsPerSecond)
+                    if (bytes > remaining) {
+                        false
+                    } else {
+                        remaining -= bytes
+                        true
+                    }
+                }
+            }.take(minOf(capacity, space, batch))
             .toList()
     }
 }

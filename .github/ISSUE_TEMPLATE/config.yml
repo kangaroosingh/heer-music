@@ -1,8 +1,8 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: Questions and troubleshooting
-    url: https://github.com/Flow-Tube/Flow/discussions
+    url: https://github.com/kangaroosingh/heer-music/issues
     about: Ask for setup help or discuss topics that are not actionable bug reports.
   - name: Security vulnerability
-    url: https://github.com/Flow-Tube/Flow/security/advisories/new
+    url: https://github.com/kangaroosingh/heer-music/security/advisories/new
     about: Privately report vulnerabilities. Do not disclose security issues in a public issue.

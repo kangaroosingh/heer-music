@@ -9,7 +9,9 @@ import io.github.aedev.flow.utils.parseYouTubeLink
  * What an intent from outside asks the app shell to open: a video or short, a page route, or the
  * music player. The activity fills it from each intent and the shell consumes it once handled.
  */
-internal class IncomingLinks {
+internal class IncomingLinks(
+    private val musicOnly: Boolean = io.github.aedev.flow.BuildConfig.MUSIC_ONLY,
+) {
     private val _videoId = mutableStateOf<String?>(null)
     val videoId: State<String?> = _videoId
 
@@ -66,7 +68,7 @@ internal class IncomingLinks {
     /** A link shared to Download with Flow; false when it names no video or short. */
     fun openDownload(text: String): Boolean {
         _downloadVideoId.value =
-            when (val destination = parseYouTubeLink(text)?.let(::linkDestination)) {
+            when (val destination = parseYouTubeLink(text)?.let { linkDestination(it, musicOnly) }) {
                 is LinkDestination.Video -> destination.videoId
                 is LinkDestination.Short -> destination.videoId
                 is LinkDestination.Page, null -> return false
@@ -84,7 +86,7 @@ internal class IncomingLinks {
         isShared: Boolean,
         isRestoring: Boolean,
     ): Boolean {
-        when (val destination = parseYouTubeLink(text)?.let(::linkDestination)) {
+        when (val destination = parseYouTubeLink(text)?.let { linkDestination(it, musicOnly) }) {
             is LinkDestination.Video -> if (!(isShared && isRestoring)) openVideo(destination.videoId, isShared = isShared)
             is LinkDestination.Short -> openVideo(destination.videoId, isShort = true)
             is LinkDestination.Page -> if (!isRestoring) openRoute(destination.route)

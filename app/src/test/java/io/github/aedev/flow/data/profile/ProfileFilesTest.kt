@@ -14,7 +14,7 @@ class ProfileFilesTest {
     private fun path(
         profile: RunningProfile,
         scope: StoreScope,
-    ) = ProfileFiles.preferences(filesDir, noBackupFilesDir, profile, scope, "player_preferences").path
+    ) = ProfileFiles.preferences(filesDir, noBackupFilesDir, profile, scope, "player_preferences").invariantSeparatorsPath
 
     @Test
     fun `Default keeps the path every store had before profiles, whatever its scope`() {
@@ -53,8 +53,10 @@ class ProfileFilesTest {
 
     @Test
     fun `Default keeps its no_backup files where they are, another profile in its private folder`() {
-        assertThat(ProfileFiles.noBackupRoot(noBackupFilesDir, default).path).isEqualTo("/data/user/0/app/no_backup")
-        assertThat(ProfileFiles.noBackupRoot(noBackupFilesDir, study).path).isEqualTo("/data/user/0/app/no_backup/profiles/${study.id}")
+        assertThat(ProfileFiles.noBackupRoot(noBackupFilesDir, default).invariantSeparatorsPath).isEqualTo("/data/user/0/app/no_backup")
+        assertThat(
+            ProfileFiles.noBackupRoot(noBackupFilesDir, study).invariantSeparatorsPath,
+        ).isEqualTo("/data/user/0/app/no_backup/profiles/${study.id}")
     }
 
     @Test
@@ -62,14 +64,14 @@ class ProfileFilesTest {
         val defaults = File(ProfileFiles.root(filesDir, noBackupFilesDir, default, StoreScope.DEFAULT_ONLY), "user_neuro_brain.json")
         val other = File(ProfileFiles.root(filesDir, noBackupFilesDir, study, StoreScope.DEFAULT_ONLY), "user_neuro_brain.json")
 
-        assertThat(defaults.path).isEqualTo("/data/user/0/app/files/user_neuro_brain.json")
-        assertThat(other.path).startsWith("/data/user/0/app/no_backup/profiles/${study.id}/")
+        assertThat(defaults.invariantSeparatorsPath).isEqualTo("/data/user/0/app/files/user_neuro_brain.json")
+        assertThat(other.invariantSeparatorsPath).startsWith("/data/user/0/app/no_backup/profiles/${study.id}/")
     }
 
     @Test
     fun `Default's database stays where Room has always kept it, another profile's sits in its library folder`() {
         assertThat(ProfileFiles.database(filesDir, noBackupFilesDir, default, "flow_database")).isNull()
-        assertThat(ProfileFiles.database(filesDir, noBackupFilesDir, study, "flow_database")?.path)
+        assertThat(ProfileFiles.database(filesDir, noBackupFilesDir, study, "flow_database")?.invariantSeparatorsPath)
             .isEqualTo("/data/user/0/app/files/profile_library/${study.id}/databases/flow_database")
     }
 

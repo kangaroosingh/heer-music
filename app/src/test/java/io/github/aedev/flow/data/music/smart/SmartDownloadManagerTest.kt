@@ -93,7 +93,8 @@ class SmartDownloadManagerTest {
             { state.value = firstArg<(SmartDownloadSettings) -> SmartDownloadSettings>()(state.value) }
         coEvery { preferences.isDeepFlowCurrentlyActive() } returns false
         every { preferences.downloadOverWifiOnly } returns flowOf(false)
-        coEvery { store.reserveAddition(any(), any(), any()) } coAnswers {
+        every { preferences.musicDownloadQuality } returns flowOf(io.github.aedev.flow.data.local.MusicAudioQuality.HIGH)
+        coEvery { store.reserveAddition(any(), any(), any(), any(), any()) } coAnswers {
             val id = firstArg<String>()
             val time = secondArg<Long>()
             state.value = state.value.copy(recentAdditions = state.value.recentAdditions + (id to time))
@@ -226,7 +227,7 @@ class SmartDownloadManagerTest {
         runTest {
             val entered = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
-            coEvery { store.reserveAddition(any(), any(), any()) } coAnswers {
+            coEvery { store.reserveAddition(any(), any(), any(), any(), any()) } coAnswers {
                 entered.complete(Unit)
                 release.await()
                 val id = firstArg<String>()

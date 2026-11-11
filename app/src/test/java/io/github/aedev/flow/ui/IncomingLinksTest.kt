@@ -15,8 +15,23 @@ class IncomingLinksTest {
     private val watchLink = "https://www.youtube.com/watch?v=$video"
 
     @Test
+    fun `music only links open audio routes without a separate video player`() {
+        val links = IncomingLinks(musicOnly = true)
+        assertThat(links.openLink(watchLink, isShared = true, isRestoring = false)).isTrue()
+        assertThat(links.route.value).isEqualTo(musicPlayerRoute(video))
+        assertThat(links.videoId.value).isNull()
+        links.consumeRoute()
+        assertThat(links.openLink("https://youtube.com/shorts/$video", isShared = true, isRestoring = false)).isTrue()
+        assertThat(links.route.value).isEqualTo(musicPlayerRoute(video))
+        assertThat(links.isShort.value).isFalse()
+        links.consumeRoute()
+        links.openLink(watchLink, isShared = true, isRestoring = true)
+        assertThat(links.route.value).isNull()
+    }
+
+    @Test
     fun `a shared video is marked shared and a tapped one is not`() {
-        val links = IncomingLinks()
+        val links = IncomingLinks(musicOnly = false)
 
         links.openLink(watchLink, isShared = true, isRestoring = false)
         assertThat(links.videoId.value).isEqualTo(video)
@@ -29,8 +44,8 @@ class IncomingLinksTest {
 
     @Test
     fun `a recreated activity re-requests a tapped video but not a shared one`() {
-        val tapped = IncomingLinks().apply { openLink(watchLink, isShared = false, isRestoring = true) }
-        val shared = IncomingLinks().apply { openLink(watchLink, isShared = true, isRestoring = true) }
+        val tapped = IncomingLinks(musicOnly = false).apply { openLink(watchLink, isShared = false, isRestoring = true) }
+        val shared = IncomingLinks(musicOnly = false).apply { openLink(watchLink, isShared = true, isRestoring = true) }
 
         assertThat(tapped.videoId.value).isEqualTo(video)
         assertThat(shared.videoId.value).isNull()
@@ -38,7 +53,7 @@ class IncomingLinksTest {
 
     @Test
     fun `a shared short opens as a short and never asks`() {
-        val links = IncomingLinks()
+        val links = IncomingLinks(musicOnly = false)
 
         links.openLink("https://youtube.com/shorts/$video", isShared = true, isRestoring = false)
 
@@ -48,7 +63,7 @@ class IncomingLinksTest {
 
     @Test
     fun `a link with no page is reported and opens nothing`() {
-        val links = IncomingLinks()
+        val links = IncomingLinks(musicOnly = false)
 
         assertThat(links.openLink("https://www.youtube.com/results?search_query=x", isShared = true, isRestoring = false)).isFalse()
         assertThat(links.videoId.value).isNull()
@@ -56,7 +71,7 @@ class IncomingLinksTest {
 
     @Test
     fun `consuming a video clears its flags`() {
-        val links = IncomingLinks().apply { openVideo(video, isShared = true) }
+        val links = IncomingLinks(musicOnly = false).apply { openVideo(video, isShared = true) }
 
         links.consumeVideo()
 

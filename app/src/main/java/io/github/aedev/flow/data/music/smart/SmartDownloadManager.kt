@@ -61,11 +61,16 @@ class SmartDownloadManager
             if (!networkAllowed()) return result(SmartDownloadResult.WAITING)
             val rows = dao.getAllDownloadsWithItemsOnce()
             val used = rows.count { it.isSmartDownload() }
-            if (used >= settings.maxSongs.coerceIn(10, 50)) return result(SmartDownloadResult.FULL)
+            if (settings.maxStorageBytes?.let { SmartDownloadStorage.reservedBytes(rows) >= it }
+                ?: (used >= settings.maxSongs.coerceIn(10, 50))
+            ) {
+                return result(SmartDownloadResult.FULL)
+            }
             val pending = rows.count { it.overallStatus in setOf(DownloadItemStatus.PENDING, DownloadItemStatus.DOWNLOADING) }
             val free = environment.availableBytes()
             val reserved = SmartDownloadPolicy.MIN_FREE_BYTES + (pending + 1L) * SmartDownloadPolicy.RESERVE_PER_SONG
             if (free < reserved) return result(SmartDownloadResult.LOW_STORAGE)
+            val bitsPerSecond = SmartDownloadStorage.bitrate(preferences.musicDownloadQuality.first())
             val now = System.currentTimeMillis()
             if (!manual && settings.lastRunAt > 0 && now - settings.lastRunAt < SmartDownloadPolicy.CHECK_INTERVAL_MS) {
                 return result(SmartDownloadResult.COOLDOWN)
@@ -86,6 +91,8 @@ class SmartDownloadManager
                     taste.disliked.keys,
                     taste.earlySkips,
                     now,
+                    SmartDownloadStorage.reservedBytes(rows),
+                    bitsPerSecond,
                 )
             var queued = 0
             var stopReason = SmartDownloadResult.EMPTY
@@ -105,7 +112,11 @@ class SmartDownloadManager
                 if (track.isHiddenArtist(brain.hiddenArtists.value) || track.videoId in latestTaste.disliked) continue
                 if ((latestTaste.earlySkips[track.videoId] ?: 0) >= 2) continue
                 val currentRows = dao.getAllDownloadsWithItemsOnce()
-                if (currentRows.count { it.isSmartDownload() } >= current.maxSongs.coerceIn(10, 50)) {
+                val estimatedBytes = SmartDownloadStorage.estimateBytes(track.duration, bitsPerSecond)
+                val reservedBytes = SmartDownloadStorage.reservedBytes(currentRows)
+                if (current.maxStorageBytes?.let { reservedBytes + estimatedBytes > it }
+                    ?: (currentRows.count { it.isSmartDownload() } >= current.maxSongs.coerceIn(10, 50))
+                ) {
                     stopReason = SmartDownloadResult.FULL
                     break
                 }
@@ -120,8 +131,17 @@ class SmartDownloadManager
                 }
                 val outcome =
                     withContext(NonCancellable) {
-                        if (store.reserveAddition(track.videoId, now, currentRows.count { it.isSmartDownload() })) {
-                            controller.enqueue(track.toDownloadRequest().copy(smartDownload = true, threads = 1))
+                        if (store.reserveAddition(
+                                track.videoId,
+                                now,
+                                currentRows.count { it.isSmartDownload() },
+                                reservedBytes,
+                                estimatedBytes,
+                            )
+                        ) {
+                            controller.enqueue(
+                                track.toDownloadRequest().copy(smartDownload = true, threads = 1, smartEstimatedBytes = estimatedBytes),
+                            )
                         } else {
                             null
                         }

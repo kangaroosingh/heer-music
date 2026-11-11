@@ -65,13 +65,24 @@ class DownloadRunner
         private val sponsorBlock: SponsorBlockRepository,
         private val subtitles: OfflineSubtitleStore,
         private val subtitleFile: DownloadSubtitleFile,
+        private val smartBudget: io.github.aedev.flow.data.music.smart.SmartDownloadBudget,
     ) {
         suspend fun run(videoId: String) {
+            val request = DownloadRequest.decode(downloadDao.getDownloadWithItems(videoId)?.download?.requestJson)
+            if (request?.smartDownload == true) smartBudget.withSlot { runStored(videoId) } else runStored(videoId)
+        }
+
+        private suspend fun runStored(videoId: String) {
             val row = downloadDao.getDownloadWithItems(videoId) ?: return
             val item = row.items.firstOrNull() ?: return
             val stored =
                 DownloadRequest.decode(row.download.requestJson)
                     ?: LegacyDownloadRequest.from(row).also { LegacyDownloadRequest.discardPartialFiles(row) }
+            if (stored.smartDownload && !smartBudget.canCommit(videoId, stored.smartEstimatedBytes.coerceAtLeast(1L))) {
+                downloadDao.updateAllItemsStatus(videoId, DownloadItemStatus.PAUSED)
+                notifier.show(videoId, stored.tags.title, DownloadPhase.Paused)
+                return
+            }
             val staging = DownloadStaging(downloads.stagingDirectory(), videoId)
             downloadDao.updateAllItemsStatus(videoId, DownloadItemStatus.DOWNLOADING)
             notifier.show(videoId, stored.tags.title, DownloadPhase.Transferring(0L, 0L))
@@ -140,6 +151,10 @@ class DownloadRunner
             }
             currentCoroutineContext().ensureActive()
             val size = output.length()
+            if (request.smartDownload && !smartBudget.canCommit(request.videoId, size)) {
+                fail(request, staging, context.getString(R.string.hm_budget_reached), keepParts = false)
+                return
+            }
             val placed = placement.place(output, request, extension)
             if (placed == null) {
                 fail(request, staging, context.getString(R.string.download_failed_save), keepParts = true)

@@ -28,6 +28,16 @@ class FlowNavigationBarTest {
     val rule = createComposeRule()
 
     private val context = ApplicationProvider.getApplicationContext<Application>()
+    private val testTabs =
+        listOf(
+            FlowTab.Home,
+            FlowTab.Shorts,
+            FlowTab.Subscriptions,
+            FlowTab.Downloads,
+            FlowTab.Library,
+            FlowTab.Search,
+            FlowTab.Explore,
+        )
     private val selections = mutableListOf<FlowTab>()
 
     private fun label(tab: FlowTab) = context.getString(tab.labelRes)
@@ -44,16 +54,25 @@ class FlowNavigationBarTest {
     }
 
     @Test
-    fun `the selected tab is announced as selected and the others are not`() {
-        setBar(FlowTab.entries.take(5), selected = FlowTab.Music)
-
+    fun `music only tabs have distinct accessible labels and the current home is selected`() {
+        val tabs = visibleFlowTabs(emptyList(), NavigationVisibility(), musicOnly = true)
+        setBar(tabs, selected = FlowTab.Music)
+        tabs.forEach { rule.onAllNodesWithText(label(it)).assertCountEquals(1) }
         rule.onNodeWithText(label(FlowTab.Music)).assertIsSelected()
-        rule.onNodeWithText(label(FlowTab.Home)).assertIsNotSelected()
+        rule.onNodeWithText(label(FlowTab.Search)).assertIsNotSelected()
+    }
+
+    @Test
+    fun `the selected tab is announced as selected and the others are not`() {
+        setBar(testTabs.take(5), selected = FlowTab.Home)
+
+        rule.onNodeWithText(label(FlowTab.Home)).assertIsSelected()
+        rule.onNodeWithText(label(FlowTab.Shorts)).assertIsNotSelected()
     }
 
     @Test
     fun `each tab is announced once`() {
-        setBar(FlowTab.entries.take(5), selected = FlowTab.Home)
+        setBar(testTabs.take(5), selected = FlowTab.Home)
 
         rule
             .onNodeWithText(label(FlowTab.Home))
@@ -62,14 +81,14 @@ class FlowNavigationBarTest {
 
     @Test
     fun `five tabs fit the bar without an overflow`() {
-        setBar(FlowTab.entries.take(5), selected = FlowTab.Home)
+        setBar(testTabs.take(5), selected = FlowTab.Home)
 
         rule.onAllNodesWithText(context.getString(R.string.nav_more)).assertCountEquals(0)
     }
 
     @Test
     fun `tabs past the fourth move behind More and still navigate`() {
-        setBar(FlowTab.entries, selected = FlowTab.Home)
+        setBar(testTabs, selected = FlowTab.Home)
 
         rule.onAllNodesWithText(label(FlowTab.Library)).assertCountEquals(0)
         rule.onNodeWithText(context.getString(R.string.nav_more)).performClick()
@@ -80,7 +99,7 @@ class FlowNavigationBarTest {
 
     @Test
     fun `More reads as selected while an overflow tab is current`() {
-        setBar(FlowTab.entries, selected = FlowTab.Search)
+        setBar(testTabs, selected = FlowTab.Search)
 
         rule.onNodeWithText(context.getString(R.string.nav_more)).assertIsSelected()
     }

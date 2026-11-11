@@ -10,12 +10,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.rounded.OfflinePin
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.*
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -169,103 +175,42 @@ private fun RowScope.PlayerToggleButton(
 @Composable
 fun PlayerMainActionButtons(
     isLiked: Boolean,
+    isDisliked: Boolean,
     isDownloaded: Boolean,
     onLikeClick: () -> Unit,
+    onDislikeClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onAddToPlaylist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
+    val scheme = MaterialTheme.colorScheme
+    val buttonColors = IconButtonDefaults.iconButtonColors(contentColor = scheme.onSurface)
+    val toggleColors = IconButtonDefaults.iconToggleButtonColors(contentColor = scheme.onSurface, checkedContentColor = scheme.primary)
     Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SplitCapsuleButton(
-            active = isDownloaded,
-            shape =
-                RoundedCornerShape(
-                    topStart = 50.dp,
-                    topEnd = 6.dp,
-                    bottomStart = 50.dp,
-                    bottomEnd = 6.dp,
-                ),
-            icon = if (isDownloaded) Icons.Rounded.OfflinePin else Icons.Outlined.Download,
-            contentDescription = stringResource(R.string.download),
-            onClick = onDownloadClick,
-        )
-        SplitCapsuleButton(
-            active = isLiked,
-            shape =
-                RoundedCornerShape(
-                    topStart = 6.dp,
-                    topEnd = 50.dp,
-                    bottomStart = 6.dp,
-                    bottomEnd = 50.dp,
-                ),
-            icon = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = stringResource(R.string.like),
-            onClick = onLikeClick,
-            onLongClick = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                onAddToPlaylist()
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SplitCapsuleButton(
-    active: Boolean,
-    shape: RoundedCornerShape,
-    icon: ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val containerColor by animateColorAsState(
-        targetValue =
-            if (active) {
-                scheme.primary
-            } else {
-                scheme.onPrimary.copy(alpha = 0.7f)
-            },
-        animationSpec = tween(durationMillis = 250),
-        label = "capsuleContainer",
-    )
-    val contentColor by animateColorAsState(
-        targetValue =
-            if (active) {
-                scheme.onPrimary
-            } else {
-                // Contrast-check against what the eye sees: the translucent pill over the surface.
-                readableAccentOn(
-                    container = lerp(scheme.surface, scheme.onPrimary, 0.7f),
-                    accent = scheme.primary,
-                )
-            },
-        animationSpec = tween(durationMillis = 250),
-        label = "capsuleContent",
-    )
-    Box(
-        modifier =
-            Modifier
-                .size(width = 50.dp, height = 42.dp)
-                .clip(shape)
-                .background(containerColor)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = contentColor,
-            modifier = Modifier.size(22.dp),
-        )
+        androidx.compose.material3.IconToggleButton(colors = toggleColors, checked = isDisliked, onCheckedChange = { onDislikeClick() }) {
+            Icon(
+                if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                contentDescription = stringResource(if (isDisliked) R.string.hm_undo_dislike else R.string.hm_dislike_remove),
+            )
+        }
+        androidx.compose.material3.IconButton(colors = buttonColors, onClick = onDownloadClick) {
+            Icon(
+                if (isDownloaded) Icons.Rounded.OfflinePin else Icons.Outlined.Download,
+                contentDescription = stringResource(R.string.download),
+            )
+        }
+        androidx.compose.material3.IconButton(colors = buttonColors, onClick = onAddToPlaylist) {
+            Icon(Icons.Outlined.PlaylistAdd, contentDescription = stringResource(R.string.add_to_playlist))
+        }
+        androidx.compose.material3.IconToggleButton(colors = toggleColors, checked = isLiked, onCheckedChange = { onLikeClick() }) {
+            Icon(
+                if (isLiked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                contentDescription = stringResource(if (isLiked) R.string.hm_remove_like else R.string.hm_like_download),
+            )
+        }
     }
 }

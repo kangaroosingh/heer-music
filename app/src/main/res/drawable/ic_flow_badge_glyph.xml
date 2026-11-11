@@ -1,16 +1,1 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The "F" glyph of the Flow badge (same tight-crop viewport as
-     ic_flow_badge_shape) so the two layers can be tinted independently. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="36dp"
-    android:viewportWidth="20.08"
-    android:viewportHeight="15.22">
-    <group
-        android:translateX="-1.96"
-        android:translateY="-4.77">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M10 7L18 7L17.2 9.5H12.8L12.2 11.5H16L15.2 14H11.5L10.5 17H7.5L10 7Z" />
-    </group>
-</vector>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="36dp" android:viewportWidth="80" android:viewportHeight="60"><path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M22,13L31,13L31,25L49,25L49,13L58,13L58,47L49,47L49,35L31,35L31,47L22,47Z M37,25L45,30L37,35Z"/></vector>

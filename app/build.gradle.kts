@@ -58,6 +58,7 @@ android {
         minSdk = 26
         targetSdk = 36
         buildConfigField("boolean", "MUSIC_ONLY", "true")
+        buildConfigField("boolean", "DONATION_PROMPTS", "false")
         versionCode = 19
         versionName = "3.0.0"
 

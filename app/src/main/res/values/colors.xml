@@ -27,5 +27,8 @@
     <color name="splash_background_light">#FFFFFF</color>
     <color name="splash_background_dark">#0F0F0F</color>
     <color name="splash_background_black">#000000</color>
+    <color name="heer_logo_background">#101C24</color>
+    <color name="heer_logo_fill">#F1C66A</color>
+    <color name="heer_logo_dark">#101C24</color>
 </resources>
 

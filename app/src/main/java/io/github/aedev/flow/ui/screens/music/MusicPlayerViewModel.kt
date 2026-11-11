@@ -62,6 +62,7 @@ class MusicPlayerViewModel
         private val artistLookup: MusicArtistLookup,
         localLyrics: LocalLyricsReader,
         videoLyricsTiming: MusicVideoLyricsTiming,
+        private val videoSwitch: io.github.aedev.flow.player.musicvideo.MusicVideoSwitch,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(MusicPlayerUiState())
         val uiState: StateFlow<MusicPlayerUiState> = _uiState.asStateFlow()
@@ -112,6 +113,7 @@ class MusicPlayerViewModel
                 musicBrain,
                 playerPreferences,
                 scrobbler,
+                { videoSwitch.songFor(it.videoId) ?: it },
             )
 
         init {
@@ -253,7 +255,7 @@ class MusicPlayerViewModel
             favoriteJob?.cancel()
             favoriteJob =
                 viewModelScope.launch {
-                    likedVideosRepository.getLikeState(videoId).collect { state ->
+                    likedVideosRepository.getLikeState(videoSwitch.listenId(videoId)).collect { state ->
                         val isLiked = state == "LIKED"
                         _uiState.update { it.copy(isLiked = isLiked) }
                         EnhancedMusicPlayerManager.setLiked(isLiked)
@@ -295,13 +297,6 @@ class MusicPlayerViewModel
 
         private fun isLocalMediaId(id: String?): Boolean = LocalMediaIds.isLocal(id)
 
-        private fun isLoadedInPlayer(videoId: String): Boolean {
-            val player = EnhancedMusicPlayerManager.player ?: return false
-            val state = player.playbackState
-            return EnhancedMusicPlayerManager.currentTrack.value?.videoId == videoId &&
-                (state == Player.STATE_READY || state == Player.STATE_BUFFERING)
-        }
-
         fun loadAndPlayTrack(
             track: MusicTrack,
             queue: List<MusicTrack> = emptyList(),
@@ -310,7 +305,7 @@ class MusicPlayerViewModel
         ) {
             // Tapping the song that is already loaded, from any list, keeps it going instead of
             // fetching and restarting it; a paused one resumes. The queue is left as it is.
-            if (!asRadio && isLoadedInPlayer(track.videoId)) {
+            if (!asRadio && MusicLoadedPlayback.matches(track.videoId)) {
                 EnhancedMusicPlayerManager.play()
                 return
             }
@@ -401,10 +396,7 @@ class MusicPlayerViewModel
 
         /** A YouTube Music link names only the song, so its details are fetched before it plays. */
         suspend fun playFromLink(videoId: String) {
-            val track =
-                InnertubeMusicService.fetchQueue(videoIds = listOf(videoId)).firstOrNull()
-                    ?: MusicTrack(videoId = videoId, title = "", artist = "", thumbnailUrl = "", duration = 0)
-            loadAndPlayTrack(track)
+            loadAndPlayTrack(MusicLinkTracks.song(videoId))
         }
 
         /** Plays a watch playlist such as an artist's shuffle or mix; false when YouTube returned no songs. */
@@ -412,7 +404,7 @@ class MusicPlayerViewModel
             playlistId: String,
             params: String?,
         ): Boolean {
-            val tracks = withTimeoutOrNull(10_000L) { InnertubeMusicService.fetchWatchPlaylist(playlistId, params) }.orEmpty()
+            val tracks = MusicLinkTracks.playlist(playlistId, params)
             loadAndPlayTrack(tracks.firstOrNull() ?: return false, tracks)
             return true
         }
@@ -554,6 +546,8 @@ class MusicPlayerViewModel
 
         fun toggleLike() = trackActions.toggleLike()
 
+        fun dislikeAndSkip(track: MusicTrack) = trackActions.dislikeAndSkip(track)
+
         fun notInterested(track: MusicTrack) = trackActions.notInterested(track)
 
         fun dontRecommendArtist(track: MusicTrack) = trackActions.dontRecommendArtist(track)
@@ -603,8 +597,4 @@ class MusicPlayerViewModel
         fun setLyricsBlurOtherLines(enabled: Boolean) = lyrics.setBlurOtherLines(enabled)
 
         fun setLyricsBackground(style: LyricsBackgroundStyle) = lyrics.setBackground(style)
-
-        override fun onCleared() {
-            super.onCleared()
-        }
     }

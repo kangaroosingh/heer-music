@@ -10,7 +10,7 @@
 - Regular YouTube video, Shorts and public-playlist links open through the music player. Shared download prompts offer audio in the music fork.
 - Recommendation reset, feedback undo and the original-ranking fallback are available in Your music taste. Private listening sessions are excluded from the new local statistics.
 
-## Testing
+## Improved
 - The original Music and Neuro benchmark floors remain unchanged; the new policy intentionally changes cold-start ordering only in improved mode.
 - Automated recommendation tests cover balance targets, shortages, missing metadata, recording identity, repetition, song dislike undo and interruption handling.
 - This is a test preview. Phone listening quality and compatibility with a physical Android Auto head unit still require user validation.

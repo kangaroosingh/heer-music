@@ -53,7 +53,7 @@ class ReleaseNotesTest {
         val items = parseReleaseNotes(body).sections.first().items
 
         assertThat(items[0].spans.last()).isEqualTo(Link("@PastaHimself", "https://github.com/PastaHimself"))
-        assertThat(items[1].spans.last()).isEqualTo(Link("#823", "https://github.com/Flow-Tube/Flow/issues/823"))
+        assertThat(items[1].spans.last()).isEqualTo(Link("#823", "https://github.com/kangaroosingh/heer-music/issues/823"))
         assertThat(items[2].spans).containsExactly(Plain("A "), Strong("bold"), Plain(" claim")).inOrder()
     }
 

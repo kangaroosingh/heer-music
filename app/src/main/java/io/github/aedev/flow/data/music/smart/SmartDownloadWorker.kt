@@ -23,6 +23,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 class SmartDownloadWorker(
@@ -82,6 +83,7 @@ class SmartDownloadWorker(
             }.distinctUntilChanged()
                 .collect { (enabled, wifi, charging) ->
                     val configuration = Triple(enabled, wifi, charging)
+                    val first = previous == null
                     val changed = previous != null && previous != configuration
                     previous = configuration
                     if (enabled) {
@@ -92,7 +94,10 @@ class SmartDownloadWorker(
                                 .setInputData(workDataOf(PROFILE to ActiveProfile.get(context).id))
                                 .build()
                         work.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
-                        if (changed) checkNow(context, wifi, charging)
+                        val initialMissing =
+                            first && store.state.first().lastRunAt == 0L &&
+                                work.getWorkInfosForUniqueWorkFlow(ONCE).first().none { !it.state.isFinished }
+                        if (changed || initialMissing) checkNow(context, wifi, charging)
                     } else {
                         work.cancelUniqueWork(ONCE)
                         work.cancelUniqueWork(PERIODIC)

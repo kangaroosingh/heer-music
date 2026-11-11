@@ -342,7 +342,7 @@ internal class AutoLibraryBrowser(
 
     private fun titleOf(mediaId: String): String? =
         when (mediaId) {
-            AutoBrowseTree.ROOT -> context.getString(R.string.app_name)
+            AutoBrowseTree.ROOT -> context.getString(R.string.fm_app_name)
             AutoBrowseTree.FOR_YOU -> context.getString(R.string.auto_tab_for_you)
             AutoBrowseTree.LIBRARY -> context.getString(R.string.library)
             AutoBrowseTree.PLAYLISTS -> context.getString(R.string.library_playlists_label)

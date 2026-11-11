@@ -20,6 +20,7 @@ data class SmartDownloadSettings(
     val enabled: Boolean = false,
     val networkConfigured: Boolean = false,
     val maxSongs: Int = 20,
+    val maxStorageBytes: Long? = null,
     val lastRunAt: Long = 0,
     val recentAdditions: Map<String, Long> = emptyMap(),
     val lastResult: SmartDownloadResult = SmartDownloadResult.DISABLED,
@@ -60,10 +61,14 @@ class SmartDownloadStore
             id: String,
             now: Long,
             used: Int,
+            usedBytes: Long = 0,
+            newBytes: Long = 0,
         ): Boolean {
             var accepted = false
             update { old ->
-                if (!old.enabled || !old.networkConfigured || used >= old.maxSongs.coerceIn(10, 50)) return@update old
+                if (!old.enabled || !old.networkConfigured) return@update old
+                if (old.maxStorageBytes == null && used >= old.maxSongs.coerceIn(10, 50)) return@update old
+                if (old.maxStorageBytes?.let { usedBytes + newBytes > it } == true) return@update old
                 val recent = old.recentAdditions.toMutableMap()
                 recent.remove(id)
                 recent[id] = now

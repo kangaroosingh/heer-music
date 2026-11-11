@@ -180,7 +180,12 @@ class FlowMusicSmokeTest {
             shell("cmd connectivity airplane-mode enable")
             shell("svc wifi disable")
             shell("svc data disable")
-            Thread.sleep(2_000)
+            val network = context.getSystemService(android.net.ConnectivityManager::class.java)
+            val disconnectDeadline = android.os.SystemClock.elapsedRealtime() + 30_000
+            while (network.activeNetwork != null && android.os.SystemClock.elapsedRealtime() < disconnectDeadline) {
+                Thread.sleep(200)
+            }
+            assertNull("Airplane-mode test must disconnect the network", network.activeNetwork)
             val dependencies =
                 dagger.hilt.android.EntryPointAccessors
                     .fromApplication(context, MusicSmokeDependencies::class.java)

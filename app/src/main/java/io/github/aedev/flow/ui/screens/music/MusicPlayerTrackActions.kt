@@ -15,6 +15,7 @@ import io.github.aedev.flow.data.scrobble.Scrobbler
 import io.github.aedev.flow.player.EnhancedMusicPlayerManager
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -32,9 +33,23 @@ internal class MusicPlayerTrackActions(
     private val musicBrain: MusicBrainEngine,
     private val playerPreferences: PlayerPreferences,
     private val scrobbler: Scrobbler,
+    private val canonical: (MusicTrack) -> MusicTrack = { it },
 ) {
+    private var feedbackJob: Job? = null
+
+    @Synchronized
+    private fun updateFeedback(block: suspend () -> Unit): Job {
+        val previous = feedbackJob
+        feedbackJob =
+            scope.launch(PerformanceDispatcher.diskIO) {
+                previous?.join()
+                block()
+            }
+        return checkNotNull(feedbackJob)
+    }
+
     fun toggleLike() {
-        val currentTrack = uiState.value.currentTrack ?: return
+        val currentTrack = uiState.value.currentTrack?.let(canonical) ?: return
         if (LocalMediaIds.isLocal(currentTrack.videoId)) return
 
         // The like state decides, not the favorites list: a song liked on another device or from
@@ -42,7 +57,7 @@ internal class MusicPlayerTrackActions(
         val like = !uiState.value.isLiked
         uiState.update { it.copy(isLiked = like) }
         scrobbler.onLikeChanged(currentTrack, like)
-        scope.launch(PerformanceDispatcher.diskIO) {
+        updateFeedback {
             if (like) {
                 playlistRepository.addToFavorites(currentTrack)
                 likedVideosRepository.likeVideo(
@@ -57,7 +72,7 @@ internal class MusicPlayerTrackActions(
                     ),
                 )
                 musicBrain.onExplicitLike(currentTrack)
-                if (playerPreferences.autoDownloadLikedMusic.first()) downloadManager.downloadTrack(currentTrack)
+                downloadManager.downloadTrack(currentTrack)
             } else {
                 playlistRepository.removeFromFavorites(currentTrack.videoId)
                 likedVideosRepository.removeLikeState(currentTrack.videoId)
@@ -66,8 +81,28 @@ internal class MusicPlayerTrackActions(
     }
 
     /** Hides this recording until undone; never escalates to an artist block. */
-    fun notInterested(track: MusicTrack) {
-        scope.launch(PerformanceDispatcher.diskIO) { musicBrain.dislikeSong(track) }
+    fun notInterested(track: MusicTrack): Job {
+        if (canonical(uiState.value.currentTrack ?: track).videoId == track.videoId) uiState.update { it.copy(isLiked = false) }
+        return updateFeedback {
+            musicBrain.dislikeSong(track)
+            playlistRepository.removeFromFavorites(track.videoId)
+            likedVideosRepository.removeLikeState(track.videoId)
+            scrobbler.onLikeChanged(track, false)
+            downloadManager.deleteDownload(track.videoId)
+        }
+    }
+
+    fun dislikeAndSkip(track: MusicTrack) {
+        val feedback = notInterested(track)
+        scope.launch {
+            feedback.join()
+            if (uiState.value.currentTrack
+                    ?.let(canonical)
+                    ?.videoId == track.videoId
+            ) {
+                EnhancedMusicPlayerManager.playNext()
+            }
+        }
     }
 
     /** "Don't recommend {artist}": an immediate permanent hard block, reversible in settings. */
@@ -113,7 +148,7 @@ internal class MusicPlayerTrackActions(
     }
 
     fun downloadTrack(track: MusicTrack? = null) {
-        val trackToDownload = track ?: uiState.value.currentTrack ?: return
+        val trackToDownload = (track ?: uiState.value.currentTrack)?.let(canonical) ?: return
 
         if (uiState.value.downloadedTrackIds.contains(trackToDownload.videoId)) {
             scope.launch(kotlinx.coroutines.Dispatchers.Main) {

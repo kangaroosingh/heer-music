@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aedev.flow.R
 import io.github.aedev.flow.data.local.MusicPlayerBackgroundStyle
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
@@ -57,6 +58,7 @@ import io.github.aedev.flow.ui.components.shared.SkipDirection
 import io.github.aedev.flow.ui.components.shared.quickactions.QuickActionUndo
 import io.github.aedev.flow.ui.components.shared.quickactions.sharedQuickActionsViewModel
 import io.github.aedev.flow.ui.screens.music.MusicPlayerViewModel
+import io.github.aedev.flow.ui.screens.music.MusicTasteViewModel
 import io.github.aedev.flow.ui.screens.music.MusicVideoSwitchViewModel
 import io.github.aedev.flow.ui.screens.music.sharedMusicPlayerViewModel
 import io.github.aedev.flow.ui.utils.LocalWindowIsLandscape
@@ -90,8 +92,12 @@ internal fun FullMusicPlayerContent(
     val sheets = remember { FullPlayerSheetState() }
     var previewDirection by remember { mutableStateOf<SkipDirection?>(null) }
     val musicPlayer by EnhancedMusicPlayerManager.playerInstance.collectAsState()
-    val videoSwitchEnabled = false
+    val videoSwitchEnabled = !LocalMediaIds.isLocal(track.videoId)
     val videoMode by videoSwitch.videoMode.collectAsState()
+    val taste: MusicTasteViewModel = hiltViewModel()
+    val tasteProfile by taste.profile.collectAsStateWithLifecycle()
+    val feedbackTrack = videoSwitch.songFor(track.videoId) ?: track
+    val isDisliked = feedbackTrack.videoId in tasteProfile?.disliked.orEmpty()
     val videoLoading by videoSwitch.isLoading.collectAsState()
     var videoShowing by remember { mutableStateOf(false) }
     // The surface mounts only on the open player: mounting it is what makes the service decode video.
@@ -298,9 +304,20 @@ internal fun FullMusicPlayerContent(
                             animateTrackText = isPlayerSheetExpanded && uiState.isPlaying && !showLyricsSheet && !queueCoversArtwork,
                             showLibraryActions = !LocalMediaIds.isLocal(uiState.currentTrack?.videoId),
                             isLiked = uiState.isLiked,
-                            isDownloaded = uiState.downloadedTrackIds.contains(uiState.currentTrack?.videoId),
-                            onLikeClick = { viewModel.toggleLike() },
-                            onDownloadClick = { viewModel.downloadTrack() },
+                            isDownloaded = uiState.downloadedTrackIds.contains(feedbackTrack.videoId),
+                            onLikeClick = {
+                                if (isDisliked) taste.undo(feedbackTrack.videoId)
+                                viewModel.toggleLike()
+                            },
+                            isDisliked = isDisliked,
+                            onDislikeClick = {
+                                if (isDisliked) {
+                                    taste.undo(feedbackTrack.videoId)
+                                } else {
+                                    viewModel.dislikeAndSkip(feedbackTrack)
+                                }
+                            },
+                            onDownloadClick = { viewModel.downloadTrack(feedbackTrack) },
                             onAddToPlaylist = { sheets.save = true },
                             modifier = modifier,
                         )

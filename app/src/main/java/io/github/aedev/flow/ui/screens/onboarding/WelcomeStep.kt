@@ -89,7 +89,7 @@ internal fun WelcomeStep(
         Row(horizontalArrangement = Arrangement.spacedBy(BrandSpacing), verticalAlignment = Alignment.CenterVertically) {
             FlowLogo(Modifier.width(BrandLogoWidth))
             Text(
-                text = stringResource(R.string.app_name),
+                text = stringResource(R.string.fm_app_name),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )

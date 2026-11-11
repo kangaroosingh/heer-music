@@ -49,6 +49,7 @@ fun DonationPromptHost(
     enabled: Boolean,
     onNavigateToDonations: () -> Unit,
 ) {
+    if (!io.github.aedev.flow.BuildConfig.DONATION_PROMPTS) return
     val activity = LocalContext.current as? ComponentActivity ?: return
     val viewModel: DonationPromptViewModel = hiltViewModel(activity)
     val visible by viewModel.visible.collectAsStateWithLifecycle()

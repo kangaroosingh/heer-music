@@ -129,8 +129,10 @@ class MusicVideoSwitch internal constructor(
         enabled: Flow<Boolean>,
     ) {
         scope.launch {
+            var previouslyEnabled: Boolean? = null
             combine(enabled, wanted, queue.entries) { on, video, (index, entries) ->
-                if (!on && video) wanted.value = false
+                if (!on && previouslyEnabled == true) wanted.value = false
+                previouslyEnabled = on
                 Settle(on && video, index, entries.getOrNull(index), entries.getOrNull(index + 1))
             }.distinctUntilChanged()
                 .collectLatest { settle ->

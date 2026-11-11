@@ -5,6 +5,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.data.local.PlayerPreferences
@@ -20,6 +21,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -48,6 +50,9 @@ class SmartDownloadWorkerTest {
         every { power.chargingOnly } returns charging
         every { store.state } returns state
         every { preferences.downloadOverWifiOnly } returns wifi
+        val running = mockk<WorkInfo>()
+        every { running.state } returns WorkInfo.State.RUNNING
+        every { work.getWorkInfosForUniqueWorkFlow(SmartDownloadWorker.ONCE) } returns flowOf(listOf(running))
     }
 
     @After fun cleanup() = unmockkAll()
@@ -78,6 +83,17 @@ class SmartDownloadWorkerTest {
             runCurrent()
             assertThat(periodic.captured.workSpec.initialDelay).isEqualTo(TimeUnit.HOURS.toMillis(12))
             assertThat(immediate.captured.workSpec.constraints.requiredNetworkType).isEqualTo(NetworkType.UNMETERED)
+            verify(exactly = 1) { work.enqueueUniqueWork(SmartDownloadWorker.ONCE, ExistingWorkPolicy.REPLACE, any<OneTimeWorkRequest>()) }
+        }
+
+    @Test fun `restoring enabled settings with no previous check repairs the missing immediate job`() =
+        runTest {
+            state.value = state.value.copy(enabled = true)
+            every { work.getWorkInfosForUniqueWorkFlow(SmartDownloadWorker.ONCE) } returns flowOf(emptyList())
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                SmartDownloadWorker.follow(context, store, preferences, power)
+            }
+            runCurrent()
             verify(exactly = 1) { work.enqueueUniqueWork(SmartDownloadWorker.ONCE, ExistingWorkPolicy.REPLACE, any<OneTimeWorkRequest>()) }
         }
 

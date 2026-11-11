@@ -32,7 +32,7 @@ class SmartDownloadsSmokeTest {
     private fun click(label: String): Boolean {
         fun visit(node: AccessibilityNodeInfo?): Boolean {
             if (node == null) return false
-            if (node.text?.toString() == label || node.contentDescription?.toString() == label) {
+            if (node.isVisibleToUser && (node.text?.toString() == label || node.contentDescription?.toString() == label)) {
                 var target: AccessibilityNodeInfo? = node
                 repeat(4) {
                     if (target?.isClickable == true && target!!.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
@@ -45,13 +45,37 @@ class SmartDownloadsSmokeTest {
         return visit(instrumentation.uiAutomation.rootInActiveWindow)
     }
 
-    private fun awaitClick(label: String) {
-        val deadline = android.os.SystemClock.elapsedRealtime() + 20_000
-        while (!click(label) && android.os.SystemClock.elapsedRealtime() < deadline) Thread.sleep(200)
-        assertTrue("Control missing: $label", android.os.SystemClock.elapsedRealtime() < deadline)
+    private fun scroll(forward: Boolean): Boolean {
+        fun visit(node: AccessibilityNodeInfo?): Boolean {
+            if (node == null) return false
+            if (node.isScrollable &&
+                node.performAction(
+                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                )
+            ) {
+                return true
+            }
+            repeat(node.childCount) { if (visit(node.getChild(it))) return true }
+            return false
+        }
+        return visit(instrumentation.uiAutomation.rootInActiveWindow)
     }
 
-    @Test fun networkAndSongLimitCanBeChosenWithoutEnablingDownloads() =
+    private fun awaitClick(label: String) {
+        val deadline = android.os.SystemClock.elapsedRealtime() + 20_000
+        repeat(3) {
+            scroll(false)
+            Thread.sleep(100)
+        }
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            if (click(label)) return
+            scroll(true)
+            Thread.sleep(300)
+        }
+        fail("Control missing: $label")
+    }
+
+    @Test fun networkAndGbBudgetCanBeChosenWithoutEnablingDownloads() =
         runBlocking {
             val original = store.state.first()
             val preferences = PlayerPreferences(context)
@@ -75,12 +99,12 @@ class SmartDownloadsSmokeTest {
                 awaitClick("Any network")
                 withTimeout(15_000) { preferences.downloadOverWifiOnly.first { !it } }
                 awaitClick("Only download while charging")
-                withTimeout(15_000) { power.chargingOnly.first { it } }
-                awaitClick("50 songs")
-                withTimeout(15_000) { store.state.first { it.maxSongs == 50 } }
+                withTimeout(15_000) { power.chargingOnly.first { it != originalCharging } }
+                awaitClick("2.0 GB")
+                withTimeout(15_000) { store.state.first { it.maxStorageBytes == 2_000_000_000L } }
                 assertFalse(store.state.first().enabled)
                 Thread.sleep(500)
-                host.screenshot("flow-music-smart-downloads.png")
+                host.screenshot("heer-music-smart-downloads.png")
             } finally {
                 store.update { original }
                 preferences.setDownloadOverWifiOnly(originalWifi)
@@ -171,6 +195,7 @@ class SmartDownloadsSmokeTest {
                                     title = "Reserved fixture slot",
                                 ),
                             smartDownload = true,
+                            smartEstimatedBytes = 60_000_000L,
                         )
                     val row =
                         io.github.aedev.flow.data.local.entity.DownloadEntity(
@@ -189,7 +214,15 @@ class SmartDownloadsSmokeTest {
                         )
                     dao.replaceDownload(row, listOf(item))
                 }
-                store.update { it.copy(enabled = true, networkConfigured = true, maxSongs = 10, lastRunAt = 0) }
+                store.update {
+                    it.copy(
+                        enabled = true,
+                        networkConfigured = true,
+                        maxSongs = 10,
+                        maxStorageBytes = 550_000_000L,
+                        lastRunAt = 0,
+                    )
+                }
                 val completed =
                     withTimeout(180_000) {
                         dao.getDownloadWithItemsFlow(song.videoId).filterNotNull().first {
