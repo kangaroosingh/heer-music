@@ -35,7 +35,10 @@ internal fun musicMediaItem(
                     .apply { if (fromVideoList) setExtras(Bundle().apply { putBoolean(EXTRA_VIDEO_LIST_ITEM, true) }) }
                     .build(),
             )
-    if (useCacheKey) builder.setCustomCacheKey(track.videoId)
+    val youtubeId =
+        io.github.aedev.flow.data.listening.ListeningIds
+            .youtubeId(track.videoId)
+    if (useCacheKey || youtubeId != null) builder.setCustomCacheKey(youtubeId ?: track.videoId)
     return builder.build()
 }
 

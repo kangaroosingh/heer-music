@@ -28,6 +28,23 @@ internal fun NavGraphBuilder.musicRoutes(
     defaultStartRoute: String,
     onMusicStarted: () -> Unit,
 ) {
+    composable("listen") {
+        currentRoute.value = "listen"
+        val musicPlayerViewModel = sharedMusicPlayerViewModel()
+        io.github.aedev.flow.ui.screens.listening.ListeningScreen(
+            onPlay = { track, queue ->
+                musicPlayerViewModel.loadAndPlayTrack(track, queue)
+                onMusicStarted()
+            },
+            onBackup = {
+                navController.navigate(
+                    "settings?target=${io.github.aedev.flow.ui.components.settings.SettingsTarget(
+                        io.github.aedev.flow.ui.components.settings.SettingsDestination.BACKUP,
+                    ).encode()}",
+                )
+            },
+        )
+    }
     composable("musicLibrary") {
         currentRoute.value = "musicLibrary"
         io.github.aedev.flow.ui.screens.playlists.PlaylistsScreen(

@@ -28,6 +28,7 @@ import io.github.aedev.flow.player.stream.ClientGateTracker
 import io.github.aedev.flow.utils.MusicPlayerUtils
 import io.github.aedev.flow.utils.potoken.WebPoTokenSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.io.File
@@ -44,6 +45,7 @@ class DownloadUtil
         @DownloadCache private val downloadCache: SimpleCache,
         @MusicCache private val musicCache: SimpleCache,
         private val downloadDao: DownloadDao,
+        private val listening: io.github.aedev.flow.data.listening.ListeningStore,
     ) {
         companion object {
             private const val TAG = "DownloadUtil"
@@ -136,7 +138,15 @@ class DownloadUtil
 
                     resolveStream(dataSpec)
                 }
-            val localFirst = LocalCopyDataSource.Factory(DefaultDataSource.Factory(context), resolvingFactory, ::downloadedSongUri)
+            val localFirst =
+                LocalCopyDataSource.Factory(
+                    DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient)),
+                    resolvingFactory,
+                    localCopyOf = ::downloadedSongUri,
+                    allowNetwork = {
+                        !kotlinx.coroutines.runBlocking { listening.state.first().downloadedOnly }
+                    },
+                )
             val refusalRetrying =
                 RefusedStreamRetryDataSource.Factory(localFirst) { dataSpec, url ->
                     val mediaId = dataSpec.key

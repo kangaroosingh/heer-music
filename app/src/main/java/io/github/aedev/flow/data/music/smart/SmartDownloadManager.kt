@@ -59,7 +59,13 @@ class SmartDownloadManager
             if (!settings.enabled || !settings.networkConfigured) return
             if (preferences.isDeepFlowCurrentlyActive()) return result(SmartDownloadResult.PRIVATE)
             if (!networkAllowed()) return result(SmartDownloadResult.WAITING)
-            val rows = dao.getAllDownloadsWithItemsOnce()
+            var rows = dao.getAllDownloadsWithItemsOnce()
+            if (settings.rotationEnabled &&
+                (manual || System.currentTimeMillis() - settings.lastRunAt >= SmartDownloadPolicy.CHECK_INTERVAL_MS)
+            ) {
+                rotateWhenFull(settings, rows)
+                rows = dao.getAllDownloadsWithItemsOnce()
+            }
             val used = rows.count { it.isSmartDownload() }
             if (settings.maxStorageBytes?.let { SmartDownloadStorage.reservedBytes(rows) >= it }
                 ?: (used >= settings.maxSongs.coerceIn(10, 50))
@@ -83,7 +89,7 @@ class SmartDownloadManager
             val selected =
                 SmartDownloadPolicy.select(
                     ranked,
-                    settings,
+                    store.state.first(),
                     storedIds + offlineIds,
                     used,
                     pending,
@@ -150,6 +156,89 @@ class SmartDownloadManager
                 if (outcome == EnqueueOutcome.QUEUED) queued++
             }
             result(if (queued == 0) stopReason else SmartDownloadResult.QUEUED)
+        }
+
+        private suspend fun rotateWhenFull(
+            settings: SmartDownloadSettings,
+            rows: List<DownloadWithItems>,
+        ) {
+            val full =
+                settings.maxStorageBytes?.let { SmartDownloadStorage.reservedBytes(rows) >= it }
+                    ?: (rows.count { it.isSmartDownload() } >= settings.maxSongs.coerceIn(10, 50))
+            if (!full || environment.availableBytes() < SmartDownloadPolicy.MIN_FREE_BYTES + SmartDownloadPolicy.RESERVE_PER_SONG) return
+            val stored = rows.map { it.download.videoId }.toSet() + downloads.downloadedTracks.first().map { it.track.videoId }
+            val taste = personalization.profile.first()
+            val replacements =
+                brain
+                    .rankTracks(candidates(), "smart_rotation")
+                    .filter {
+                        it.videoId !in stored && it.videoId !in taste.disliked &&
+                            it.duration in 1..600 && !it.isHiddenArtist(brain.hiddenArtists.value) &&
+                            it.videoId.matches(Regex("[A-Za-z0-9_-]{11}")) && (taste.earlySkips[it.videoId] ?: 0) < 2 &&
+                            settings.recentAdditions[it.videoId]?.let { at ->
+                                System.currentTimeMillis() - at <
+                                    SmartDownloadPolicy.READDITION_DELAY_MS
+                            } !=
+                            true
+                    }.take(5)
+            if (replacements.isEmpty()) return
+            val protected =
+                library.favorites
+                    .first()
+                    .map { it.videoId }
+                    .toSet() +
+                    likes.getLikedMusicFlow().first().map { it.videoId } +
+                    library.playlists
+                        .first()
+                        .flatMap { it.tracks }
+                        .map { it.videoId } +
+                    saved.smartDownloadSeeds(Int.MAX_VALUE).map { it.videoId } +
+                    library.history
+                        .first()
+                        .take(50)
+                        .map { it.videoId } +
+                    listOfNotNull(
+                        io.github.aedev.flow.player.EnhancedMusicPlayerManager.currentTrack.value
+                            ?.videoId,
+                    )
+            val now = System.currentTimeMillis()
+            val ids =
+                SmartDownloadRotation.select(
+                    rows.map { row ->
+                        SmartDownloadRotation.Entry(
+                            row.download.videoId,
+                            row.download.createdAt,
+                            row.isSmartDownload(),
+                            row.overallStatus == DownloadItemStatus.COMPLETED,
+                        )
+                    },
+                    protected,
+                    now,
+                    replacements.size,
+                )
+            val freed = SmartDownloadStorage.reservedBytes(rows.filter { it.download.videoId in ids })
+            val smallestReplacement =
+                replacements.minOf {
+                    SmartDownloadStorage.estimateBytes(it.duration, SmartDownloadStorage.bitrate(preferences.musicDownloadQuality.first()))
+                }
+            if (settings.maxStorageBytes?.let { it - SmartDownloadStorage.reservedBytes(rows) + freed < smallestReplacement } ==
+                true
+            ) {
+                return
+            }
+            for (id in ids) {
+                if (!networkAllowed() || !store.state.first().rotationEnabled) break
+                if (io.github.aedev.flow.player.EnhancedMusicPlayerManager.currentTrack.value
+                        ?.videoId == id
+                ) {
+                    continue
+                }
+                downloads.deleteDownload(id)
+                store.update { current ->
+                    val recent = ((current.recentAdditions - id) + (id to now)).entries.toList().takeLast(200)
+                    current.copy(recentAdditions = recent.associate { it.toPair() })
+                }
+            }
         }
 
         private suspend fun candidates(): List<MusicTrack> {

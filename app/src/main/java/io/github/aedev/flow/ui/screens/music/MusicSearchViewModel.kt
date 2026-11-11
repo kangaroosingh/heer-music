@@ -38,6 +38,7 @@ class MusicSearchViewModel
     @Inject
     constructor(
         private val downloadManager: DownloadManager,
+        private val listening: io.github.aedev.flow.data.listening.ListeningStore,
         private val searchHistory: SearchHistoryRepository,
         private val privacyGate: PrivacyGate,
         @ApplicationContext private val context: Context,
@@ -63,13 +64,13 @@ class MusicSearchViewModel
             // Handle search suggestions with debounce
             _query
                 .debounce(300)
-                .filter { it.isNotBlank() && searchHistory.isSearchSuggestionsEnabled() }
+                .filter { it.isNotBlank() && searchHistory.isSearchSuggestionsEnabled() && !listening.state.first().downloadedOnly }
                 .onEach { q ->
                     fetchSuggestions(q)
                 }.launchIn(viewModelScope)
 
             viewModelScope.launch(PerformanceDispatcher.networkIO) {
-                _moods.value = InnertubeMusicService.fetchMoodAndGenres()
+                if (!listening.state.first().downloadedOnly) _moods.value = InnertubeMusicService.fetchMoodAndGenres()
             }
 
             viewModelScope.launch {
@@ -137,16 +138,62 @@ class MusicSearchViewModel
         }
 
         private suspend fun loadSummary(q: String) {
+            val offline = listening.state.first().downloadedOnly
+            val local =
+                downloadManager.downloadedTracks
+                    .first()
+                    .map {
+                        it.track
+                    }.filter {
+                        io.github.aedev.flow.utils.PunjabiSearch
+                            .matches(q, "${it.title} ${it.artist}")
+                    }.map {
+                        io.github.aedev.flow.innertube.models.SongItem(
+                            it.videoId,
+                            it.title,
+                            listOf(
+                                io.github.aedev.flow.innertube.models
+                                    .Artist(it.artist, it.channelId),
+                            ),
+                            duration = it.duration,
+                            thumbnail = it.thumbnailUrl,
+                        )
+                    }
+            val localShelf =
+                io.github.aedev.flow.innertube.pages.SearchSummary(
+                    context.getString(R.string.downloads_title),
+                    local,
+                    io.github.aedev.flow.innertube.pages.SearchSummaryKind.SONGS,
+                )
+            if (offline) {
+                _uiState.update {
+                    it.copy(
+                        searchSummary = SearchSummaryPage(listOf(localShelf)),
+                        isLoading = false,
+                        isSearching = true,
+                        continuation = null,
+                    )
+                }
+                return
+            }
             val result =
                 withTimeoutOrNull(15_000L) {
-                    YouTube.searchSummary(q)
+                    YouTube.searchSummary(
+                        io.github.aedev.flow.utils.PunjabiSearch
+                            .query(q),
+                    )
                 }
 
             result
                 ?.onSuccess { summaryPage ->
                     _uiState.update { state ->
                         state.copy(
-                            searchSummary = summaryPage.distinctItemsForLazyKeys(),
+                            searchSummary =
+                                summaryPage
+                                    .copy(
+                                        summaries =
+                                            (if (local.isEmpty()) emptyList() else listOf(localShelf)) + summaryPage.summaries,
+                                    ).distinctItemsForLazyKeys(),
                             isLoading = false,
                             isSearching = true,
                             continuation = summaryPage.continuation,
@@ -182,9 +229,17 @@ class MusicSearchViewModel
             q: String,
             filter: SearchFilter,
         ) {
+            if (listening.state.first().downloadedOnly) {
+                loadSummary(q)
+                return
+            }
             val result =
                 withTimeoutOrNull(12_000L) {
-                    YouTube.search(q, filter)
+                    YouTube.search(
+                        io.github.aedev.flow.utils.PunjabiSearch
+                            .query(q),
+                        filter,
+                    )
                 }
 
             result

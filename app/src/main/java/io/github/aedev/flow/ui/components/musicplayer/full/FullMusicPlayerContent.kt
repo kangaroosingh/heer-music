@@ -94,10 +94,8 @@ internal fun FullMusicPlayerContent(
     val musicPlayer by EnhancedMusicPlayerManager.playerInstance.collectAsState()
     val videoSwitchEnabled = !LocalMediaIds.isLocal(track.videoId)
     val videoMode by videoSwitch.videoMode.collectAsState()
-    val taste: MusicTasteViewModel = hiltViewModel()
-    val tasteProfile by taste.profile.collectAsStateWithLifecycle()
     val feedbackTrack = videoSwitch.songFor(track.videoId) ?: track
-    val isDisliked = feedbackTrack.videoId in tasteProfile?.disliked.orEmpty()
+    val feedback = musicPlayerFeedback(feedbackTrack, viewModel)
     val videoLoading by videoSwitch.isLoading.collectAsState()
     var videoShowing by remember { mutableStateOf(false) }
     // The surface mounts only on the open player: mounting it is what makes the service decode video.
@@ -305,18 +303,9 @@ internal fun FullMusicPlayerContent(
                             showLibraryActions = !LocalMediaIds.isLocal(uiState.currentTrack?.videoId),
                             isLiked = uiState.isLiked,
                             isDownloaded = uiState.downloadedTrackIds.contains(feedbackTrack.videoId),
-                            onLikeClick = {
-                                if (isDisliked) taste.undo(feedbackTrack.videoId)
-                                viewModel.toggleLike()
-                            },
-                            isDisliked = isDisliked,
-                            onDislikeClick = {
-                                if (isDisliked) {
-                                    taste.undo(feedbackTrack.videoId)
-                                } else {
-                                    viewModel.dislikeAndSkip(feedbackTrack)
-                                }
-                            },
+                            onLikeClick = feedback.onLike,
+                            isDisliked = feedback.disliked,
+                            onDislikeClick = feedback.onDislike,
                             onDownloadClick = { viewModel.downloadTrack(feedbackTrack) },
                             onAddToPlaylist = { sheets.save = true },
                             modifier = modifier,
@@ -325,14 +314,12 @@ internal fun FullMusicPlayerContent(
                 },
                 progress = { modifier ->
                     MaterialTheme(colorScheme = controlScheme) {
-                        PlayerProgressSlider(
-                            positionProvider = { positionState.value },
+                        MusicPlayerProgress(
+                            id = track.videoId,
+                            position = { positionState.value },
                             duration = uiState.duration,
-                            onSeekTo = { viewModel.seekTo(it) },
-                            // The tree stays composed while collapsed (warm for a jank-free expand), so the
-                            // squiggly/wavy per-frame wave animations must stop when nobody can see them —
-                            // they otherwise burn a frame budget for the whole background-listening session.
-                            isPlaying = uiState.isPlaying && isPlayerSheetExpanded,
+                            onSeek = viewModel::seekTo,
+                            playing = uiState.isPlaying && isPlayerSheetExpanded,
                             modifier = modifier,
                         )
                     }

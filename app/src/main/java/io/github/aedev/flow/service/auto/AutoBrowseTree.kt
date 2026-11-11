@@ -18,6 +18,9 @@ internal object AutoBrowseTree {
     const val REDISCOVER = "auto:rediscover"
     const val RIGHT_NOW = "auto:right_now"
 
+    const val RADIO = "auto:radio"
+    const val BOOKS = "auto:books"
+    const val PODCASTS = "auto:podcasts"
     const val LIKED = "auto:liked"
     const val DOWNLOADS = "auto:downloads"
     const val RECENT = "auto:recent"
@@ -33,7 +36,7 @@ internal object AutoBrowseTree {
 
     val tabs = listOf(FOR_YOU, LIBRARY, PLAYLISTS, QUEUE)
     val mixes = listOf(ON_REPEAT, RIGHT_NOW, REDISCOVER)
-    val libraryLists = listOf(LIKED, DOWNLOADS, RECENT, WATCH_LATER)
+    val libraryLists = listOf(LIKED, DOWNLOADS, RECENT, RADIO, BOOKS, PODCASTS, WATCH_LATER)
 
     fun rootTabs(limit: Int): List<String> = tabs.take(limit.takeIf { it > 0 } ?: DEFAULT_ROOT_LIMIT)
 

@@ -19,5 +19,8 @@ object LocalMediaIds {
 
     fun videoUri(id: String): Uri? = mediaStoreId(id)?.let { ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, it) }
 
-    fun audioUri(id: String): Uri? = mediaStoreId(id)?.let { ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it) }
+    fun audioUri(id: String): Uri? =
+        io.github.aedev.flow.data.listening.ListeningIds
+            .audioUri(id)
+            ?: mediaStoreId(id)?.let { ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it) }
 }

@@ -30,6 +30,8 @@ class SmartDownloadsSmokeTest {
     private val store get() = EntryPointAccessors.fromApplication(context, SmartDownloadWorker.Dependencies::class.java).store()
 
     private fun click(label: String): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
+
         fun visit(node: AccessibilityNodeInfo?): Boolean {
             if (node == null) return false
             if (node.isVisibleToUser && (node.text?.toString() == label || node.contentDescription?.toString() == label)) {
@@ -46,6 +48,8 @@ class SmartDownloadsSmokeTest {
     }
 
     private fun scroll(forward: Boolean): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
+
         fun visit(node: AccessibilityNodeInfo?): Boolean {
             if (node == null) return false
             if (node.isScrollable &&
@@ -72,6 +76,7 @@ class SmartDownloadsSmokeTest {
             scroll(true)
             Thread.sleep(300)
         }
+        FlowMusicSmokeTest().screenshot("heer-smart-native-failure.png")
         fail("Control missing: $label")
     }
 

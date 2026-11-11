@@ -199,9 +199,14 @@ internal class AutoLibraryBrowser(
         val tracks = withContext(PerformanceDispatcher.diskIO) { library.tracks(parentId) }.orEmpty()
         val index = tracks.indexOfFirst { it.videoId == videoId }
         if (index < 0) return Picked(resolveEach(listOf(item)), 0, fromVideoList = false)
-        if (!AutoBrowseTree.isVideoList(parentId)) return Picked(tracks, index, fromVideoList = false)
+        val fromVideoList = AutoBrowseTree.isVideoList(parentId)
+        val spoken =
+            io.github.aedev.flow.data.listening.ListeningIds
+                .kind(videoId)
+                ?.let { it.endsWith("book") || it.endsWith("podcast") } == true
+        if (!fromVideoList && !spoken) return Picked(tracks, index, fromVideoList = false)
         val resumeMs = withContext(PerformanceDispatcher.diskIO) { library.resumePositionMs(videoId) }
-        return Picked(tracks, index, fromVideoList = true, startPositionMs = resumeMs)
+        return Picked(tracks, index, fromVideoList = fromVideoList, startPositionMs = resumeMs)
     }
 
     private suspend fun resolveEach(items: List<MediaItem>): List<MusicTrack> =
@@ -350,9 +355,12 @@ internal class AutoLibraryBrowser(
             AutoBrowseTree.ON_REPEAT -> context.getString(R.string.section_on_repeat)
             AutoBrowseTree.RIGHT_NOW -> context.getString(MusicTimeBucket.fromTimestamp(System.currentTimeMillis()).rotationTitleRes())
             AutoBrowseTree.REDISCOVER -> context.getString(R.string.section_rediscover)
+            AutoBrowseTree.RADIO -> context.getString(R.string.hm_radio)
+            AutoBrowseTree.BOOKS -> context.getString(R.string.hm_books)
+            AutoBrowseTree.PODCASTS -> context.getString(R.string.hm_podcasts)
             AutoBrowseTree.LIKED -> context.getString(R.string.liked_music_playlist)
             AutoBrowseTree.DOWNLOADS -> context.getString(R.string.downloads_title)
-            AutoBrowseTree.RECENT -> context.getString(R.string.section_recently_played)
+            AutoBrowseTree.RECENT -> context.getString(R.string.hm_continue_listening)
             AutoBrowseTree.WATCH_LATER -> context.getString(R.string.watch_later)
             else -> null
         }

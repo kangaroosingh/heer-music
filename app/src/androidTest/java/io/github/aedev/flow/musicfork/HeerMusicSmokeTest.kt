@@ -111,7 +111,13 @@ class HeerMusicSmokeTest {
                 }
                 host.screenshot("heer-music-player.png")
                 waitFor("Dislike button must be visible") { click(context.getString(R.string.hm_dislike_remove)) }
-                withTimeout(30_000) {
+                withTimeout(30_000) { personal.profile.first { clip.videoId in it.disliked } }
+                waitFor("Dislike Undo must be visible") { click(context.getString(R.string.undo)) }
+                withTimeout(10_000) { personal.profile.first { clip.videoId !in it.disliked } }
+                delay(12_000)
+                assertNotNull("Undo must preserve the audio download", deps.downloads().getDownloadedTrackPath(clip.videoId))
+                instrumentation.runOnMainSync { vm.dislikeAndSkip(clip) }
+                withTimeout(45_000) {
                     personal.profile.first { clip.videoId in it.disliked }
                     while (deps.downloads().getDownloadedTrackPath(clip.videoId) != null) delay(200)
                 }

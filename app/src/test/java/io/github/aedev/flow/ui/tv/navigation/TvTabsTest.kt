@@ -13,6 +13,7 @@ class TvTabsTest {
         val nav = tvNavigation(emptyList(), FlowTab.Music.id, allOn, musicOnly = true)
         assertThat(nav.tabs).containsExactly(FlowTab.Music, FlowTab.Search, FlowTab.Library, FlowTab.Downloads).inOrder()
         assertThat(nav.startTab).isEqualTo(FlowTab.Music)
+        assertThat(tvNavigation(emptyList(), FlowTab.Listen.id, allOn, musicOnly = true).startTab).isEqualTo(FlowTab.Music)
     }
 
     @Test

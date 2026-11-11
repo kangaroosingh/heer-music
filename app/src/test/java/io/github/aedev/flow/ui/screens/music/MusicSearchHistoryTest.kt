@@ -1,5 +1,6 @@
 package io.github.aedev.flow.ui.screens.music
 
+import androidx.lifecycle.viewModelScope
 import io.github.aedev.flow.data.local.PrivacyGate
 import io.github.aedev.flow.data.local.SearchHistoryRepository
 import io.github.aedev.flow.data.local.SearchHistoryScope
@@ -15,11 +16,14 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -29,10 +33,18 @@ class MusicSearchHistoryTest {
     private val testDispatcher = StandardTestDispatcher()
     private val history: SearchHistoryRepository = mockk(relaxed = true)
     private var deepFlow = false
+    private val models = mutableListOf<MusicSearchViewModel>()
 
     private fun viewModel() =
         MusicSearchViewModel(
             mockk<DownloadManager>(relaxed = true).also { every { it.downloadedTracks } returns flowOf(emptyList()) },
+            mockk<io.github.aedev.flow.data.listening.ListeningStore>().also {
+                every { it.state } returns
+                    flowOf(
+                        io.github.aedev.flow.data.listening
+                            .ListeningState(),
+                    )
+            },
             history,
             PrivacyGate(
                 deepFlowActive = { deepFlow },
@@ -40,7 +52,7 @@ class MusicSearchHistoryTest {
                 scrobbleDuringDeepFlow = { false },
             ),
             mockk(relaxed = true),
-        )
+        ).also { models += it }
 
     @Before
     fun setUp() {
@@ -53,6 +65,10 @@ class MusicSearchHistoryTest {
 
     @After
     fun tearDown() {
+        val jobs = models.mapNotNull { it.viewModelScope.coroutineContext[Job] }
+        jobs.forEach { it.cancel() }
+        testDispatcher.scheduler.advanceUntilIdle()
+        runBlocking { withTimeout(5000) { jobs.forEach { it.join() } } }
         Dispatchers.resetMain()
         unmockkAll()
     }

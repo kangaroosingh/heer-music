@@ -57,10 +57,26 @@ data class MusicTrack(
     val itemType: MusicItemType = MusicItemType.SONG,
 ) {
     val highResThumbnailUrl: String
-        get() = ThumbnailUrlResolver.resolveMusicThumbnail(videoId, thumbnailUrl, 1080)
+        get() =
+            if (io.github.aedev.flow.data.localmedia.LocalMediaIds.isLocal(
+                    videoId,
+                )
+            ) {
+                thumbnailUrl
+            } else {
+                ThumbnailUrlResolver.resolveMusicThumbnail(videoId, thumbnailUrl, 1080)
+            }
 
     val listThumbnailUrl: String
-        get() = ThumbnailUrlResolver.resolveMusicThumbnail(videoId, thumbnailUrl, 256)
+        get() =
+            if (io.github.aedev.flow.data.localmedia.LocalMediaIds.isLocal(
+                    videoId,
+                )
+            ) {
+                thumbnailUrl
+            } else {
+                ThumbnailUrlResolver.resolveMusicThumbnail(videoId, thumbnailUrl, 256)
+            }
 }
 
 @Serializable

@@ -129,6 +129,10 @@ class SmartDownloadsViewModel
             }
         }
 
+        fun rotation(value: Boolean) {
+            viewModelScope.launch { store.update { it.copy(rotationEnabled = value) } }
+        }
+
         fun charging(value: Boolean) {
             viewModelScope.launch {
                 power.setChargingOnly(value)

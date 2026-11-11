@@ -242,4 +242,38 @@ class SmartDownloadManagerTest {
             assertThat(queued).hasSize(1)
             assertThat(state.value.recentAdditions.keys).containsExactly(queued.single().videoId)
         }
+
+    @Test fun `rotation replaces only an old automatic download with an eligible new song`() =
+        runTest {
+            state.value = state.value.copy(rotationEnabled = true, maxSongs = 10)
+            every { library.playlists } returns flowOf(emptyList())
+            val old = row(songs[0].toDownloadRequest().copy(smartDownload = true), DownloadItemStatus.COMPLETED)
+            rows += old.copy(download = old.download.copy(createdAt = 1))
+            repeat(9) { number ->
+                val request = songs[(number + 1) % songs.size].toDownloadRequest().copy(smartDownload = true)
+                rows += row(request, DownloadItemStatus.COMPLETED)
+            }
+            coEvery { downloads.deleteDownload(any()) } coAnswers { rows.removeAll { it.download.videoId == firstArg<String>() } }
+            manager.fill(manual = true)
+            coVerify(exactly = 1) { downloads.deleteDownload(songs[0].videoId) }
+            assertThat(queued).isNotEmpty()
+            assertThat(queued.map { it.videoId }).doesNotContain(songs[0].videoId)
+            assertThat(rows).hasSize(10)
+        }
+
+    @Test fun `rotation never removes a protected liked or playlist song`() =
+        runTest {
+            state.value = state.value.copy(rotationEnabled = true, maxSongs = 10)
+            every { library.playlists } returns flowOf(emptyList())
+            val old = row(songs[0].toDownloadRequest().copy(smartDownload = true), DownloadItemStatus.COMPLETED)
+            rows += old.copy(download = old.download.copy(createdAt = 1))
+            repeat(9) { number ->
+                val request = songs[number + 1].toDownloadRequest().copy(smartDownload = true)
+                rows += row(request, DownloadItemStatus.COMPLETED)
+            }
+            every { library.favorites } returns flowOf(listOf(songs[0]))
+            manager.fill(manual = true)
+            coVerify(exactly = 0) { downloads.deleteDownload(any()) }
+            assertThat(queued).isEmpty()
+        }
 }

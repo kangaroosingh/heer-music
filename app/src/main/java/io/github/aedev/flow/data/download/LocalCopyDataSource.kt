@@ -10,13 +10,15 @@ import androidx.media3.datasource.TransferListener
 /**
  * Opens a song from the device when it is there: a file or document URI, or a `music://` item
  * whose download [localCopyOf] finds. Those bypass both caches, which only ever hold streamed
- * bytes under the same id, and everything else goes to [remote]. Media3 routes data sources by
- * URI scheme only, never by a lookup, so this one just picks between the two it is given.
+ * bytes under the same id. Direct HTTPS audio without a song cache key bypasses [remote], keeping
+ * live radio out of the YouTube resolver and caches. Media3 routes by URI scheme, not download
+ * availability, so the saved-file lookup happens here.
  */
 @OptIn(UnstableApi::class)
 internal class LocalCopyDataSource(
     private val local: DataSource,
     private val remote: DataSource,
+    private val allowNetwork: () -> Boolean = { true },
     private val localCopyOf: (videoId: String) -> Uri?,
 ) : DataSource {
     private var current: DataSource? = null
@@ -50,7 +52,9 @@ internal class LocalCopyDataSource(
                     null
                 }
             }
-        val source = if (onDevice != null) local else remote
+        if (onDevice == null && !allowNetwork()) throw java.io.IOException("Downloaded-only playback is enabled")
+        val directAudio = dataSpec.uri.scheme == "https" && dataSpec.key == null
+        val source = if (onDevice != null || directAudio) local else remote
         current = source
         return source.open(onDevice ?: dataSpec)
     }
@@ -76,9 +80,11 @@ internal class LocalCopyDataSource(
     class Factory(
         private val local: DataSource.Factory,
         private val remote: DataSource.Factory,
+        private val allowNetwork: () -> Boolean = { true },
         private val localCopyOf: (videoId: String) -> Uri?,
     ) : DataSource.Factory {
-        override fun createDataSource(): DataSource = LocalCopyDataSource(local.createDataSource(), remote.createDataSource(), localCopyOf)
+        override fun createDataSource(): DataSource =
+            LocalCopyDataSource(local.createDataSource(), remote.createDataSource(), allowNetwork, localCopyOf)
     }
 
     internal companion object {

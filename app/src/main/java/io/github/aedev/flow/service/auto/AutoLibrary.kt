@@ -35,6 +35,7 @@ class AutoLibrary
         private val musicHistory: MusicHistoryRepository,
         private val playlists: PlaylistRepository,
         private val viewHistory: ViewHistory,
+        private val listening: io.github.aedev.flow.data.listening.ListeningStore,
     ) {
         private data class CachedSearch(
             val at: Long,
@@ -51,7 +52,7 @@ class AutoLibrary
 
         /** Where a video from a video list was left, so the car carries on from there; 0 to start over. */
         suspend fun resumePositionMs(videoId: String): Long =
-            PlaybackResumePolicy.resolveStartPosition(
+            listening.state.first().bookmarks[videoId] ?: PlaybackResumePolicy.resolveStartPosition(
                 savedPosition = viewHistory.getSavedPosition(videoId),
                 durationMs = viewHistory.getSavedDuration(videoId),
                 resumeAllowed = true,
@@ -64,26 +65,126 @@ class AutoLibrary
             }
             AutoBrowseTree.searchQueryOf(parentId)?.let { return search(it) }
             return when (parentId) {
-                AutoBrowseTree.ON_REPEAT -> musicBrain.onRepeatShelf()
-                AutoBrowseTree.RIGHT_NOW -> musicBrain.timeOfDayTracks(MIX_SIZE).audioMusicOnly()
-                AutoBrowseTree.REDISCOVER -> musicBrain.rediscoverTracks(MIX_SIZE).audioMusicOnly()
-                AutoBrowseTree.LIKED -> liked.getLikedMusicFlow().first().map { it.toMusicTrack() }
-                AutoBrowseTree.DOWNLOADS -> downloads.downloadedTracks.first().map { it.track }
-                AutoBrowseTree.RECENT -> musicHistory.history.first()
-                AutoBrowseTree.WATCH_LATER -> playlists.getVideoOnlyWatchLaterFlow().first().map { it.toMusicTrack() }
-                AutoBrowseTree.QUEUE -> EnhancedMusicPlayerManager.queue.value
-                else -> null
+                AutoBrowseTree.RADIO -> {
+                    listening.state.first().let { state ->
+                        if (state.downloadedOnly) {
+                            emptyList()
+                        } else {
+                            io.github.aedev.flow.data.listening.RadioCatalog.stations
+                                .sortedByDescending {
+                                    it.track().videoId in
+                                        state.favourites
+                                }.map { it.track() }
+                        }
+                    }
+                }
+
+                AutoBrowseTree.BOOKS -> {
+                    listening.state.first().let { state ->
+                        state.entries
+                            .filter {
+                                io.github.aedev.flow.data.listening.ListeningIds
+                                    .kind(it.id)
+                                    .orEmpty()
+                                    .endsWith("book") &&
+                                    (
+                                        !state.downloadedOnly || io.github.aedev.flow.data.listening.ListeningIds
+                                            .kind(it.id) == "book"
+                                    )
+                            }.map { it.track() }
+                    }
+                }
+
+                AutoBrowseTree.PODCASTS -> {
+                    if (listening.state.first().downloadedOnly) {
+                        emptyList()
+                    } else {
+                        listening.state
+                            .first()
+                            .entries
+                            .filter {
+                                io.github.aedev.flow.data.listening.ListeningIds
+                                    .kind(it.id)
+                                    .orEmpty()
+                                    .endsWith("podcast")
+                            }.map { it.track() }
+                    }
+                }
+
+                AutoBrowseTree.ON_REPEAT -> {
+                    musicBrain.onRepeatShelf()
+                }
+
+                AutoBrowseTree.RIGHT_NOW -> {
+                    musicBrain.timeOfDayTracks(MIX_SIZE).audioMusicOnly()
+                }
+
+                AutoBrowseTree.REDISCOVER -> {
+                    musicBrain.rediscoverTracks(MIX_SIZE).audioMusicOnly()
+                }
+
+                AutoBrowseTree.LIKED -> {
+                    liked.getLikedMusicFlow().first().map { it.toMusicTrack() }
+                }
+
+                AutoBrowseTree.DOWNLOADS -> {
+                    downloads.downloadedTracks.first().map { it.track }
+                }
+
+                AutoBrowseTree.RECENT -> {
+                    listening.state.first().let { state ->
+                        (
+                            state.entries
+                                .filter { it.id in state.bookmarks }
+                                .asReversed()
+                                .map { it.track() } + musicHistory.history.first()
+                        ).distinctBy { it.videoId }
+                    }
+                }
+
+                AutoBrowseTree.WATCH_LATER -> {
+                    playlists.getVideoOnlyWatchLaterFlow().first().map { it.toMusicTrack() }
+                }
+
+                AutoBrowseTree.QUEUE -> {
+                    EnhancedMusicPlayerManager.queue.value
+                }
+
+                else -> {
+                    null
+                }
             }
         }
 
         /** Songs for [query], from the cache when the same words were searched a moment ago. */
         suspend fun search(query: String): List<MusicTrack> {
-            val key = query.trim().lowercase()
-            if (key.isEmpty()) return emptyList()
+            val offline = listening.state.first().downloadedOnly
+            val key = query.trim().lowercase() + if (offline) ":offline" else ":online"
+            if (query.isBlank()) return emptyList()
             return searchLock.withLock {
                 val now = System.currentTimeMillis()
                 searches[key]?.takeIf { now - it.at < SEARCH_TTL_MS }?.let { return@withLock it.tracks }
-                val tracks = InnertubeMusicService.searchMusic(query.trim())
+                val local =
+                    downloads.downloadedTracks
+                        .first()
+                        .map {
+                            it.track
+                        }.filter {
+                            io.github.aedev.flow.utils.PunjabiSearch
+                                .matches(query, "${it.title} ${it.artist}")
+                        }
+                val tracks =
+                    if (listening.state.first().downloadedOnly) {
+                        local
+                    } else {
+                        (
+                            local +
+                                InnertubeMusicService.searchMusic(
+                                    io.github.aedev.flow.utils.PunjabiSearch
+                                        .query(query),
+                                )
+                        ).distinctBy { it.videoId }
+                    }
                 searches[key] = CachedSearch(now, tracks)
                 while (searches.size > MAX_CACHED_SEARCHES) searches.remove(searches.keys.first())
                 tracks

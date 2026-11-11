@@ -20,7 +20,7 @@ class FlowTabTest {
 
     @Test fun musicOnlyKeepsFourMusicDestinations() {
         assertEquals(
-            listOf(FlowTab.Music, FlowTab.Search, FlowTab.Library, FlowTab.Downloads),
+            listOf(FlowTab.Music, FlowTab.Search, FlowTab.Library, FlowTab.Downloads, FlowTab.Listen),
             visibleFlowTabs(emptyList(), NavigationVisibility(), musicOnly = true),
         )
         assertEquals(FlowTab.Music, resolveDefaultFlowTab(FlowTab.Home.id, emptyList(), NavigationVisibility(), musicOnly = true))
@@ -99,7 +99,7 @@ class FlowTabTest {
 
     @Test
     fun persistedIdsNeverChange() {
-        assertEquals(DEFAULT_NAV_TAB_ORDER, FlowTab.entries.map(FlowTab::id))
+        assertEquals(DEFAULT_NAV_TAB_ORDER + 8, FlowTab.entries.map(FlowTab::id))
         FlowTab.entries.forEach { tab -> assertEquals(tab, FlowTab.fromId(tab.id)) }
     }
 

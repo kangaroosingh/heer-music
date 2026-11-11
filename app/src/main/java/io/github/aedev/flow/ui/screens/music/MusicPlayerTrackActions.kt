@@ -33,6 +33,7 @@ internal class MusicPlayerTrackActions(
     private val musicBrain: MusicBrainEngine,
     private val playerPreferences: PlayerPreferences,
     private val scrobbler: Scrobbler,
+    private val listening: io.github.aedev.flow.data.listening.ListeningStore? = null,
     private val canonical: (MusicTrack) -> MusicTrack = { it },
 ) {
     private var feedbackJob: Job? = null
@@ -81,20 +82,30 @@ internal class MusicPlayerTrackActions(
     }
 
     /** Hides this recording until undone; never escalates to an artist block. */
-    fun notInterested(track: MusicTrack): Job {
+    fun notInterested(
+        track: MusicTrack,
+        delayed: Boolean = false,
+    ): Job {
         if (canonical(uiState.value.currentTrack ?: track).videoId == track.videoId) uiState.update { it.copy(isLiked = false) }
         return updateFeedback {
             musicBrain.dislikeSong(track)
             playlistRepository.removeFromFavorites(track.videoId)
             likedVideosRepository.removeLikeState(track.videoId)
             scrobbler.onLikeChanged(track, false)
-            downloadManager.deleteDownload(track.videoId)
+            if (delayed && listening != null) {
+                val generation = System.currentTimeMillis()
+                listening.update { it.copy(pendingDislikes = it.pendingDislikes + (track.videoId to generation)) }
+                io.github.aedev.flow.data.music.DislikeDownloadWorker
+                    .schedule(context, track.videoId, generation)
+            } else {
+                downloadManager.deleteDownload(track.videoId)
+            }
         }
     }
 
-    fun dislikeAndSkip(track: MusicTrack) {
-        val feedback = notInterested(track)
-        scope.launch {
+    fun dislikeAndSkip(track: MusicTrack): Job {
+        val feedback = notInterested(track, delayed = true)
+        return scope.launch {
             feedback.join()
             if (uiState.value.currentTrack
                     ?.let(canonical)

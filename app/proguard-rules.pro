@@ -91,3 +91,5 @@
 -dontwarn javax.annotation.**
 -dontwarn org.slf4j.**
 -dontwarn java.beans.**
+# ICU transliterators load binary resources and registry classes by their original names.
+-keep class com.ibm.icu.** { *; }

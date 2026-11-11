@@ -18,6 +18,7 @@ import io.github.aedev.flow.service.Media3MusicService
 import io.github.aedev.flow.ui.screens.music.MusicPlayerViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -216,6 +217,8 @@ class FlowMusicSmokeTest {
     }
 
     private fun visibleText(): String {
+        if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
+
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo?): String {
             if (node == null) return ""
             return buildString {
@@ -227,6 +230,12 @@ class FlowMusicSmokeTest {
     }
 
     @Test fun tasteOnboardingAndMusicTabsRender() {
+        val taste =
+            dagger.hilt.android.EntryPointAccessors
+                .fromApplication(context, MusicSmokeDependencies::class.java)
+                .personalization()
+        val original = runBlocking { taste.profile.first() }
+        runBlocking { taste.update { it.copy(setupComplete = false) } }
         val activity = activity()
         try {
             val deadline = android.os.SystemClock.elapsedRealtime() + 40_000
@@ -238,9 +247,16 @@ class FlowMusicSmokeTest {
             instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
             Thread.sleep(2_000)
             val text = visibleText()
-            listOf("Home", "Search", "Library", "Downloads").forEach { assertTrue("Missing music tab $it: $text", text.contains(it)) }
+            listOf(
+                "Home",
+                "Search",
+                "Library",
+                "Downloads",
+                "Listen",
+            ).forEach { assertTrue("Missing music tab $it: $text", text.contains(it)) }
             screenshot("flow-music-home.png")
         } finally {
+            runBlocking { taste.update { original } }
             instrumentation.runOnMainSync { activity.finish() }
         }
     }

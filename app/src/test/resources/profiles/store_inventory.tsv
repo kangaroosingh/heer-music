@@ -161,3 +161,4 @@ cache_dir	master_live_slice.zip	main:data/profile/ProfileSlices.kt	CACHE	-	The r
 prefs_datastore	music_recommendations_v1	main:data/recommendation/music/MusicPersonalization.kt	PROFILE	private	Local listening taste, feedback and recommendation metrics; never backed up.
 prefs_datastore	smart_downloads_v1	main:data/music/smart/SmartDownloadStore.kt	PROFILE	private	Automatic download consent, device budget and recent queue reservations; never backed up.
 files_dir	-	main:data/music/smart/SmartDownloadEnvironment.kt	DEVICE	-	Reads free space on the install storage volume; writes no profile data.
+prefs_datastore	heer_listening_v1	main:data/listening/ListeningStore.kt	PROFILE	private	Listening library, bookmarks and device-only URI permissions; excluded from backups.

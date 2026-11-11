@@ -20,6 +20,7 @@ internal class MusicPlayStart(
     private val viewHistory: ViewHistory,
     private val playerPreferences: PlayerPreferences,
     private val playlistRepository: PlaylistRepository,
+    private val listening: io.github.aedev.flow.data.listening.ListeningStore? = null,
 ) {
     /** Offline copies of [queue], so they play from the device instead of the network. */
     suspend fun downloadedUris(queue: List<MusicTrack>): Map<String, Uri> =
@@ -32,8 +33,29 @@ internal class MusicPlayStart(
                 }.toMap()
         }
 
+    fun sourceTitleRes(track: MusicTrack): Int =
+        if (io.github.aedev.flow.data.listening.ListeningIds
+                .kind(track.videoId) !=
+            null
+        ) {
+            io.github.aedev.flow.R.string.hm_listen
+        } else {
+            io.github.aedev.flow.R.string.local_media_title
+        }
+
     /** Where [track] should start: its saved place when it is long and resuming is on, else 0. */
     suspend fun resumePosition(track: MusicTrack): Long {
+        if (io.github.aedev.flow.data.listening.ListeningIds
+                .isRadio(track.videoId)
+        ) {
+            return 0L
+        }
+        listening
+            ?.state
+            ?.first()
+            ?.bookmarks
+            ?.get(track.videoId)
+            ?.let { return it }
         if (!playerPreferences.musicResumeLongTracks.first()) return 0L
         return withContext(PerformanceDispatcher.diskIO) {
             val durationMs = track.duration * 1000L

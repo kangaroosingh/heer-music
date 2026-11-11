@@ -103,7 +103,7 @@ class LocalCopyDataSourceTest {
     @Test
     fun `reads and close go to the source that was opened`() {
         val sut = source()
-        sut.open(spec(uri("https", "example.com")))
+        sut.open(spec(uri("music", "xyz"), key = "xyz"))
 
         assertThat(sut.read(ByteArray(8), 0, 8)).isEqualTo("remote".length)
         sut.close()
@@ -111,5 +111,25 @@ class LocalCopyDataSourceTest {
         assertThat(remote.closed).isTrue()
         assertThat(local.closed).isFalse()
         assertThat(sut.uri).isNull()
+    }
+
+    @Test(expected = java.io.IOException::class)
+    fun `downloaded only refuses an uncached network request`() {
+        LocalCopyDataSource(local, remote, allowNetwork = { false }, localCopyOf = { null })
+            .open(spec(uri("https", "example.org")))
+    }
+
+    @Test fun `downloaded only still opens explicit downloaded audio`() {
+        LocalCopyDataSource(local, remote, allowNetwork = { false }, localCopyOf = { file })
+            .open(spec(uri("music", "abc")))
+        assertThat(local.opened?.uri).isSameInstanceAs(file)
+        assertThat(remote.opened).isNull()
+    }
+
+    @Test fun `direct HTTPS audio bypasses the youtube resolver and caches`() {
+        val request = spec(uri("https", "radio.example.org"))
+        LocalCopyDataSource(local, remote, localCopyOf = { null }).open(request)
+        assertThat(local.opened).isSameInstanceAs(request)
+        assertThat(remote.opened).isNull()
     }
 }

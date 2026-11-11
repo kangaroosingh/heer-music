@@ -18,6 +18,7 @@ private val Context.smartDownloadData by safePreferencesDataStore(name = "smart_
 data class SmartDownloadSettings(
     val version: Int = 1,
     val enabled: Boolean = false,
+    val rotationEnabled: Boolean = false,
     val networkConfigured: Boolean = false,
     val maxSongs: Int = 20,
     val maxStorageBytes: Long? = null,

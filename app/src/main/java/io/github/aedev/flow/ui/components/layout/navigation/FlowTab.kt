@@ -46,6 +46,7 @@ enum class FlowTab(
     Search(5, if (io.github.aedev.flow.BuildConfig.MUSIC_ONLY) "musicSearch" else "search", R.string.nav_search),
     Explore(6, "categories", R.string.nav_explore),
     Downloads(7, DOWNLOADS_TAB_ROUTE, R.string.nav_downloads),
+    Listen(8, "listen", R.string.hm_listen),
     ;
 
     companion object {
@@ -63,6 +64,7 @@ fun FlowTab.icon(selected: Boolean): ImageVector =
         FlowTab.Library -> if (selected) Icons.Filled.VideoLibrary else Icons.Outlined.VideoLibrary
         FlowTab.Search -> if (selected) Icons.Filled.Search else Icons.Outlined.Search
         FlowTab.Explore -> if (selected) Icons.Filled.Explore else Icons.Outlined.Explore
+        FlowTab.Listen -> if (selected) Icons.Filled.Subscriptions else Icons.Outlined.Subscriptions
         FlowTab.Downloads -> if (selected) Icons.Filled.Download else Icons.Outlined.Download
     }
 
@@ -84,7 +86,7 @@ fun visibleFlowTabs(
     visibility: NavigationVisibility,
     musicOnly: Boolean = io.github.aedev.flow.BuildConfig.MUSIC_ONLY,
 ): List<FlowTab> {
-    if (musicOnly) return listOf(FlowTab.Music, FlowTab.Search, FlowTab.Library, FlowTab.Downloads)
+    if (musicOnly) return listOf(FlowTab.Music, FlowTab.Search, FlowTab.Library, FlowTab.Downloads, FlowTab.Listen)
     val enabled =
         buildSet {
             if (visibility.home) add(FlowTab.Home)

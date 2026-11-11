@@ -23,6 +23,7 @@ internal class MusicTasteViewModel
         val personalization: MusicPersonalization,
         private val brain: MusicBrainEngine,
         private val artists: FavouriteArtistsStore,
+        private val listening: io.github.aedev.flow.data.listening.ListeningStore,
         catalog: FavouriteArtistCatalog,
     ) : ViewModel() {
         val profile =
@@ -37,7 +38,10 @@ internal class MusicTasteViewModel
         }
 
         fun undo(id: String) {
-            viewModelScope.launch { personalization.undoDislike(id) }
+            viewModelScope.launch {
+                listening.update { it.copy(pendingDislikes = it.pendingDislikes - id) }
+                personalization.undoDislike(id)
+            }
         }
 
         fun reset() {

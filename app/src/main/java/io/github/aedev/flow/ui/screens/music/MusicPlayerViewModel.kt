@@ -61,6 +61,7 @@ class MusicPlayerViewModel
         private val lyricsHelper: LyricsHelper,
         private val artistLookup: MusicArtistLookup,
         localLyrics: LocalLyricsReader,
+        listening: io.github.aedev.flow.data.listening.ListeningStore,
         videoLyricsTiming: MusicVideoLyricsTiming,
         private val videoSwitch: io.github.aedev.flow.player.musicvideo.MusicVideoSwitch,
     ) : ViewModel() {
@@ -85,7 +86,8 @@ class MusicPlayerViewModel
         private var loadTrackJob: kotlinx.coroutines.Job? = null
         private val seekGuard = MusicSeekGuard()
         private val radioSwitch = MusicRadioSwitch(viewModelScope, _uiState, playerPreferences)
-        private val playStart = MusicPlayStart(downloadManager, viewHistory, playerPreferences, playlistRepository)
+        private val playStart = MusicPlayStart(downloadManager, viewHistory, playerPreferences, playlistRepository, listening)
+        private val related = MusicRelatedContent(viewModelScope, _uiState)
         private val lyrics =
             MusicPlayerLyrics(
                 context,
@@ -113,6 +115,7 @@ class MusicPlayerViewModel
                 musicBrain,
                 playerPreferences,
                 scrobbler,
+                listening,
                 { videoSwitch.songFor(it.videoId) ?: it },
             )
 
@@ -277,7 +280,8 @@ class MusicPlayerViewModel
                             currentTrack = track,
                             isLoading = false,
                             error = null,
-                            playingFrom = context.getString(R.string.local_media_title),
+                            playingFrom =
+                                context.getString(playStart.sourceTitleRes(track)),
                         )
                     }
                     val startPositionMs = playStart.resumePosition(track)
@@ -287,7 +291,8 @@ class MusicPlayerViewModel
                             audioUrl = localUris[track.videoId]?.toString() ?: "",
                             queue = activeQueue,
                             startPositionMs = startPositionMs,
-                            sourceName = context.getString(R.string.local_media_title),
+                            sourceName =
+                                context.getString(playStart.sourceTitleRes(track)),
                             localUriOverrides = localUris,
                         )
                     }
@@ -505,36 +510,7 @@ class MusicPlayerViewModel
             EnhancedMusicPlayerManager.playFromQueue(index)
         }
 
-        // Both the currentTrack collector and the (kept-composed) player content request
-        // related tracks for the same id; without this guard every advance fetched twice.
-        private var relatedFetchedForId: String? = null
-
-        fun fetchRelatedContent(videoId: String) {
-            if (relatedFetchedForId == videoId) return
-            relatedFetchedForId = videoId
-            viewModelScope.launch(PerformanceDispatcher.networkIO) {
-                _uiState.update { it.copy(isRelatedLoading = true) }
-                try {
-                    val related =
-                        withTimeoutOrNull(10_000L) {
-                            YouTubeMusicService.getRelatedMusic(videoId, 20)
-                        } ?: emptyList()
-                    if (related.isEmpty()) relatedFetchedForId = null
-
-                    // Related content is display-only here: the radio pool (automix)
-                    // is owned by Media3MusicService and must not churn per track.
-                    _uiState.update {
-                        it.copy(
-                            relatedContent = related,
-                            isRelatedLoading = false,
-                        )
-                    }
-                } catch (e: Exception) {
-                    relatedFetchedForId = null
-                    _uiState.update { it.copy(isRelatedLoading = false) }
-                }
-            }
-        }
+        fun fetchRelatedContent(videoId: String) = related.fetch(videoId)
 
         fun toggleShuffle() {
             EnhancedMusicPlayerManager.toggleShuffle()

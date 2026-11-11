@@ -94,6 +94,11 @@ internal fun SmartDownloadControls(vm: SmartDownloadsViewModel) {
             }, label = { Text(stringResource(R.string.fm_smart_any)) })
         }
         Text(stringResource(R.string.fm_smart_network_help), style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.hm_rotation), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(checked = state.settings.rotationEnabled, onCheckedChange = vm::rotation)
+        }
+        Text(stringResource(R.string.hm_rotation_help), style = MaterialTheme.typography.bodySmall)
         val chargingLabel = stringResource(R.string.fm_smart_charging)
         Row(Modifier.fillMaxWidth()) {
             Text(chargingLabel, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)

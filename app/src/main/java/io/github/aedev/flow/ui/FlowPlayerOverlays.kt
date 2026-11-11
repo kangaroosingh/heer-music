@@ -35,6 +35,7 @@ import io.github.aedev.flow.player.GlobalPlayerState
 import io.github.aedev.flow.ui.components.equalizer.LocalEqualizerState
 import io.github.aedev.flow.ui.components.layout.FlowBottomInsets
 import io.github.aedev.flow.ui.components.layout.LocalFlowBottomInsets
+import io.github.aedev.flow.ui.components.layout.LocalFlowSnackbarHostState
 import io.github.aedev.flow.ui.components.music.sheet.LocalMusicMenus
 import io.github.aedev.flow.ui.components.music.sheet.MusicMenuSheets
 import io.github.aedev.flow.ui.components.music.sheet.MusicMenus
@@ -229,6 +230,7 @@ internal fun FlowPlayerOverlays(
         LocalMusicMenus provides musicMenus,
         LocalEqualizerState provides equalizerState,
         LocalFlowBottomInsets provides bottomInsets,
+        LocalFlowSnackbarHostState provides snackbarHostState,
     ) {
         VideoPlayerHost(
             video = activeVideo,

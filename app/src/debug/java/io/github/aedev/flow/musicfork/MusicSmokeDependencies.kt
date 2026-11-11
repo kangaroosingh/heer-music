@@ -12,6 +12,12 @@ import io.github.aedev.flow.data.recommendation.music.MusicPersonalization
 interface MusicSmokeDependencies {
     fun videoSwitch(): io.github.aedev.flow.player.musicvideo.MusicVideoSwitch
 
+    fun listening(): io.github.aedev.flow.data.listening.ListeningStore
+
+    fun autoLibrary(): io.github.aedev.flow.service.auto.AutoLibrary
+
+    fun feeds(): io.github.aedev.flow.data.listening.PodcastFeeds
+
     fun downloads(): DownloadManager
 
     fun personalization(): MusicPersonalization
