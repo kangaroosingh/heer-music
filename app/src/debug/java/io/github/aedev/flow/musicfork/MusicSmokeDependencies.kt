@@ -10,6 +10,8 @@ import io.github.aedev.flow.data.recommendation.music.MusicPersonalization
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface MusicSmokeDependencies {
+    fun libraryPlaylists(): io.github.aedev.flow.data.local.PlaylistRepository
+
     fun videoSwitch(): io.github.aedev.flow.player.musicvideo.MusicVideoSwitch
 
     fun listening(): io.github.aedev.flow.data.listening.ListeningStore

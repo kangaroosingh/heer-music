@@ -35,6 +35,7 @@ data class ListeningState(
     val bookmarks: Map<String, Long> = emptyMap(),
     val downloadedOnly: Boolean = false,
     val pendingDislikes: Map<String, Long> = emptyMap(),
+    val soundCloudMixes: List<SoundCloudMix> = emptyList(),
 )
 
 @Singleton

@@ -69,7 +69,8 @@ internal object MusicRadioPlanner {
         queueIds: Set<String>,
     ): List<MusicTrack> =
         capArtists(
-            candidates
+            MusicRecordingPolicy
+                .unique(candidates)
                 .distinctBy { it.videoId }
                 .filterNot { it.videoId == currentId || it.videoId in queueIds },
             emptyMap(),
@@ -111,7 +112,8 @@ internal object MusicRadioPlanner {
         val existingIds = existing.mapTo(HashSet()) { it.videoId }
         val fresh =
             capArtists(
-                incoming
+                MusicRecordingPolicy
+                    .unique(incoming, existing)
                     .distinctBy { it.videoId }
                     .filterNot { it.videoId == currentId || it.videoId in queueIds || it.videoId in existingIds },
                 artistCounts(existing),
@@ -145,5 +147,5 @@ internal object MusicRadioPlanner {
         pool: List<MusicTrack>,
         queueIds: Set<String>,
         limit: Int,
-    ): List<MusicTrack> = pool.filterNot { it.videoId in queueIds }.take(limit)
+    ): List<MusicTrack> = MusicRecordingPolicy.unique(pool).filterNot { it.videoId in queueIds }.take(limit)
 }

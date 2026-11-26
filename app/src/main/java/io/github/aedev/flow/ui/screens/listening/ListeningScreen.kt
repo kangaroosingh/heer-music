@@ -93,6 +93,8 @@ internal fun ListeningScreen(
                 R.string.hm_books,
                 R.string.hm_podcasts,
                 R.string.hm_mixes,
+                R.string.hm_workout,
+                R.string.hm_soundcloud,
             ).forEachIndexed {
                 index,
                 title,
@@ -111,6 +113,10 @@ internal fun ListeningScreen(
 
         if (tab == 3) {
             ListeningMixes(onPlay)
+        } else if (tab == 4) {
+            WorkoutScreen(onPlay)
+        } else if (tab == 5) {
+            SoundCloudScreen()
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = flowBottomContentPadding()),

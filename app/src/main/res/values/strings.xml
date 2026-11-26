@@ -5000,4 +5000,39 @@
     <string name="hm_search_youtube">Search YouTube</string>
     <string name="hm_continue_listening">Continue listening</string>
     <string name="hm_loading_sources">Loading audio sources...</string>
+
+    <string name="hm_workout">Workout</string>
+    <string name="hm_workout_name">Punjabi Workout</string>
+    <string name="hm_workout_help">Build a Punjabi-first workout playlist from energetic searches and your favourite artists. Save it to your library for playback, downloads and Android Auto. Downloaded-only mode uses saved music.</string>
+    <string name="hm_weights">Weights</string>
+    <string name="hm_running">Running</string>
+    <string name="hm_intervals">Intervals</string>
+    <string name="hm_workout_minutes">%1$d min</string>
+    <string name="hm_workout_tempo">Tempo preference: %1$d–%2$d BPM</string>
+    <string name="hm_workout_unknown">Include songs with unknown tempo</string>
+    <string name="hm_workout_tempo_help">Choose music and a tempo range you enjoy. BPM values come from uploader titles, not audio analysis. Turn unknown tempo off for a stricter match. Audio speed is unchanged.</string>
+    <string name="hm_workout_build">Build playlist</string>
+    <string name="hm_workout_error">Could not build or save the playlist. Check your connection and try again.</string>
+    <string name="hm_workout_empty">No matching songs found. Try another tempo or include unknown tempo. Offline mode needs downloaded music.</string>
+    <string name="hm_workout_result">%1$d songs · %2$d minutes available</string>
+    <string name="hm_workout_order">Lower labelled tempos go at the start and end where available. Shortages may produce a shorter playlist; preview the songs and adjust it in your library.</string>
+    <string name="hm_workout_play">Play workout</string>
+    <string name="hm_workout_save">Save playlist</string>
+    <string name="hm_workout_saved">Saved to library</string>
+    <string name="hm_workout_description">Punjabi workout · preferred tempo %1$d–%2$d BPM. Tempo labels are uploader supplied, not measured; unknown-tempo tracks may be included.</string>
+    <string name="hm_bpm_unknown">BPM unknown</string>
+    <string name="hm_bpm_labelled">%1$d BPM · uploader label</string>
+    <string name="hm_soundcloud">SoundCloud</string>
+    <string name="hm_soundcloud_help">Save public SoundCloud tracks and DJ mixes, including /sets/ playlists. Paste a full soundcloud.com link; shared tracking parameters are removed. Playback uses the free official player and needs internet.</string>
+    <string name="hm_soundcloud_link">Public SoundCloud link</string>
+    <string name="hm_soundcloud_save">Save mix</string>
+    <string name="hm_soundcloud_invalid">Could not save this link. Use a public https://soundcloud.com/artist/track or /artist/sets/playlist address. Private and shortened links are not supported.</string>
+    <string name="hm_soundcloud_empty">Paste one of your favourite Punjabi workout mixes to get started.</string>
+    <string name="hm_soundcloud_play">Open player</string>
+    <string name="hm_soundcloud_remove">Remove</string>
+    <string name="hm_soundcloud_close">Close</string>
+    <string name="hm_soundcloud_open">Open SoundCloud</string>
+    <string name="hm_soundcloud_limits">This free player works while this screen is open. Closing it or leaving the app stops playback. It does not support Heer downloads, the native queue or Android Auto. If a mix cannot play here, open it on SoundCloud. Downloaded-only mode disables this player.</string>
+
+    <string name="hm_soundcloud_offline">Turn off downloaded-only playback in Listen to open SoundCloud.</string>
 </resources>

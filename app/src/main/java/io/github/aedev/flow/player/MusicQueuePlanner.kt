@@ -3,10 +3,20 @@ package io.github.aedev.flow.player
 internal object MusicQueuePlanner {
     const val INDEX_UNSET = -1
 
+    fun upcomingCopies(
+        queueIds: List<String>,
+        playerIndex: Int,
+        currentTrackId: String?,
+        selectedId: String,
+    ): List<Int> {
+        val start = playNextInsertionIndex(queueIds, playerIndex, currentTrackId)
+        return queueIds.indices.filter { it >= start && queueIds[it] == selectedId }
+    }
+
     fun currentQueueIndex(
         queueIds: List<String>,
         playerIndex: Int,
-        currentTrackId: String?
+        currentTrackId: String?,
     ): Int {
         if (playerIndex in queueIds.indices && queueIds[playerIndex] == currentTrackId) {
             return playerIndex
@@ -20,7 +30,7 @@ internal object MusicQueuePlanner {
     fun playNextInsertionIndex(
         queueIds: List<String>,
         playerIndex: Int,
-        currentTrackId: String?
+        currentTrackId: String?,
     ): Int {
         val currentIndex = currentQueueIndex(queueIds, playerIndex, currentTrackId)
         return if (currentIndex == INDEX_UNSET) {
@@ -35,7 +45,7 @@ internal object MusicQueuePlanner {
         pendingMediaId: String?,
         pendingPlayerIndex: Int,
         actualMediaId: String?,
-        actualPlayerIndex: Int
+        actualPlayerIndex: Int,
     ): Boolean {
         val pendingIndexMissed = pendingPlayerIndex != INDEX_UNSET && pendingPlayerIndex != actualPlayerIndex
         return isAutomaticTransition &&

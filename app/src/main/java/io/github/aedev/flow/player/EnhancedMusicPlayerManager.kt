@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -298,6 +299,13 @@ object EnhancedMusicPlayerManager {
         this.isDownloaded = isDownloaded
         appContext = context.applicationContext
         isInitialized = true
+
+        scope.launch {
+            _currentTrack.collect { track ->
+                radioHistory.record(track)
+                _automixItems.value = radioHistory.eligible(_automixItems.value, _queue.value)
+            }
+        }
 
         queuePersistence = QueuePersistence.getInstance(context)
         audioSettingsPersistence = AudioSettingsPersistence.getInstance(context)
@@ -835,10 +843,12 @@ object EnhancedMusicPlayerManager {
         }
     }
 
+    private val radioHistory = MusicRadioHistory()
+
     fun updateAutomixItems(items: List<MusicTrack>) {
         _automixItems.value =
             MusicRadioPlanner.seedPool(
-                candidates = items,
+                candidates = radioHistory.eligible(items, _queue.value),
                 currentId = _currentTrack.value?.videoId,
                 queueIds = _queue.value.mapTo(HashSet()) { it.videoId },
             )
@@ -852,7 +862,7 @@ object EnhancedMusicPlayerManager {
         val grown =
             MusicRadioPlanner.growPool(
                 existing = existing,
-                incoming = items,
+                incoming = radioHistory.eligible(items, _queue.value),
                 currentId = _currentTrack.value?.videoId,
                 queueIds = _queue.value.mapTo(HashSet()) { it.videoId },
             )
@@ -992,6 +1002,14 @@ object EnhancedMusicPlayerManager {
     }
 
     fun playNext(track: MusicTrack) {
+        MusicQueuePlanner
+            .upcomingCopies(
+                _queue.value.map { it.videoId },
+                player?.currentMediaItemIndex ?: MusicQueuePlanner.INDEX_UNSET,
+                _currentTrack.value?.videoId,
+                track.videoId,
+            ).asReversed()
+            .forEach { removeFromQueue(it) }
         val currentQ = _queue.value.toMutableList()
         val insertIdx =
             MusicQueuePlanner.playNextInsertionIndex(
