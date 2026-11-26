@@ -3,6 +3,7 @@ package io.github.aedev.flow.data.listening
 import io.github.aedev.flow.data.music.model.MusicTrack
 import io.github.aedev.flow.data.recommendation.music.primaryArtistKey
 import io.github.aedev.flow.player.MusicRecordingPolicy
+import io.github.aedev.flow.utils.PunjabiSearch
 
 enum class WorkoutStyle(
     val centreBpm: Int,
@@ -21,6 +22,72 @@ data class WorkoutRequest(
 
 object WorkoutPolicy {
     private val bpmLabel = Regex("(?i)\\b(\\d{2,3})\\s*bpm\\b")
+
+    // Editorial artist/context selection, not inferred language metadata or a tempo measurement.
+    private val punjabiArtists =
+        setOf(
+            "babbu maan",
+            "karan aujla",
+            "sidhu moosewala",
+            "diljit dosanjh",
+            "amrinder gill",
+            "arjan dhillon",
+            "ap dhillon",
+            "shubh",
+            "gur sidhu",
+            "gippy grewal",
+            "garry sandhu",
+            "ranjit bawa",
+            "harbhajan mann",
+            "manmohan waris",
+            "kamal heer",
+            "jazzy b",
+            "kulwinder billa",
+            "jordan sandhu",
+            "navaan sandhu",
+            "mankirt aulakh",
+            "kaur b",
+            "nimrat khaira",
+            "sunanda sharma",
+            "gurlez akhtar",
+            "miss pooja",
+            "prem dhillon",
+            "amrit maan",
+            "ammy virk",
+            "afsana khan",
+            "harnoor",
+            "kaka",
+            "nirvair pannu",
+            "sajjan adeeb",
+            "cheema y",
+            "guru randhawa",
+            "sharry mann",
+            "himmat sandhu",
+            "simar doraha",
+            "the prophec",
+            "zehr vibe",
+            "juss",
+            "satinder sartaaj",
+            "r nait",
+            "chani nattan",
+            "inderpal moga",
+            "talwiinder",
+            "gurnam bhullar",
+            "sukh e",
+            "baani sandhu",
+            "aastha gill",
+        )
+    private val contextLabel = Regex("(?i)\\b(?:punjabi|panjabi|bhangra)\\b")
+
+    private fun artistContext(name: String): Boolean {
+        val key = " ${PunjabiSearch.key(name)} "
+        return punjabiArtists.any { " $it " in key }
+    }
+
+    fun hasPunjabiContext(track: MusicTrack): Boolean =
+        artistContext(track.artist) || track.artists.any { artistContext(it.name) } ||
+            contextLabel.containsMatchIn("${track.title} ${track.artist}") ||
+            (track.title + track.artist).any { it in '\u0a00'..'\u0a7f' }
 
     /** Uploader-labelled tempo, not an acoustic measurement. Never infer from genre or artist. */
     fun labelledBpm(track: MusicTrack): Int? =
@@ -44,7 +111,7 @@ object WorkoutPolicy {
         return listOfNotNull(
             "Punjabi $mood ${request.centreBpm} BPM songs",
             "Punjabi $mood energetic songs",
-            artists.firstOrNull()?.let { "$it Punjabi $mood songs" },
+            "${artists.firstOrNull(::artistContext) ?: "Karan Aujla"} Punjabi $mood songs",
         )
     }
 
@@ -57,7 +124,7 @@ object WorkoutPolicy {
             MusicRecordingPolicy
                 .unique(candidates)
                 .filter { track ->
-                    track.duration in 90..600 &&
+                    hasPunjabiContext(track) && track.duration in 90..600 &&
                         (labelledBpm(track)?.let { it in range } ?: request.includeUnknownTempo)
                 }.sortedBy { labelledBpm(it) == null }
                 .toMutableList()

@@ -4,4 +4,5 @@
 
 ## New
 - Build and save Punjabi workout playlists with adjustable tempo preferences, duration and workout presets, with explicit unknown-tempo controls.
+- Require Punjabi artist or context matches before tempo selection, so generic English BPM fitness tracks do not replace Punjabi music.
 - Save public SoundCloud mixes and playlists with NewPipeExtractor metadata lookup and the free official foreground player.

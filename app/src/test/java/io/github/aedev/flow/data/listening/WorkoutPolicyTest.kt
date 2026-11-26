@@ -9,7 +9,7 @@ class WorkoutPolicyTest {
         id: String,
         title: String,
         duration: Int = 180,
-        artist: String = id,
+        artist: String = "Karan Aujla",
     ) = MusicTrack(id, title, artist, "", duration)
 
     @Test fun `tempo is never invented from genre or search words`() {
@@ -43,5 +43,22 @@ class WorkoutPolicyTest {
         assertEquals(3, queries.size)
         assertTrue(queries.all { "Punjabi" in it })
         assertTrue(queries.any { "Babbu Maan" in it })
+    }
+
+    @Test fun `generic English fitness tracks cannot qualify from BPM alone`() {
+        val candidates =
+            listOf(
+                track("a", "Target Rate 120 BPM", artist = "Workout Electronica"),
+                track("b", "Antisocial Workout Remix 135 BPM", artist = "Power Music Workout"),
+                track("c", "Status", artist = "Jordan Sandhu"),
+            )
+        assertEquals(listOf("c"), WorkoutPolicy.build(candidates, WorkoutRequest()).map { it.videoId })
+    }
+
+    @Test fun `Punjabi context selection preserves unknown tempo without inventing language`() {
+        val track = track("new", "Punjabi Bhangra Workout", artist = "New Artist")
+        assertTrue(WorkoutPolicy.hasPunjabiContext(track))
+        assertNull(WorkoutPolicy.labelledBpm(track))
+        assertTrue(WorkoutPolicy.build(listOf(track), WorkoutRequest(includeUnknownTempo = false)).isEmpty())
     }
 }
